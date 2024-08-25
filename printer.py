@@ -34,10 +34,9 @@ class Printer:
         if sp.is_null(sexpr):
             print(")", end="")
             return
+
         # sexpr is Cell
         (car, cdr) = (sexpr.car, sexpr.cdr)
-
-        # print(cdr)
 
         if not sp.is_pair(cdr) and not sp.is_null(cdr):
             self.repr_print(car)
