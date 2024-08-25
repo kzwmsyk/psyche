@@ -1,5 +1,4 @@
-from sexpr import Sexpr, Cell, Nil, Symbol, Number, NIL, T, BuiltinFunction
-from sctoken import Token, TokenType
+from sexpr import Sexpr, Number, NIL, T, BuiltinFunction
 import sclist as sc
 from typing import Callable
 from functools import reduce

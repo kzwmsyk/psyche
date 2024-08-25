@@ -1,13 +1,11 @@
 from contextlib import contextmanager
-from sexpr import Sexpr, Symbol, Cell, Nil, Lambda, NIL, T, \
+from sexpr import Sexpr, Symbol, Cell, Nil, NIL, T, \
     BuiltinFunction, BuiltinSpecialForm, Lambda, Macro, \
     Number
 import sclist as sc
 import builtin
 import specialform
-from typing import Callable, Self
-from dataclasses import dataclass
-from enum import Enum, auto
+from typing import Self
 
 from logging import getLogger
 

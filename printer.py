@@ -1,4 +1,4 @@
-from sexpr import Sexpr, Symbol, Cell, Atom, Nil, Number, Lambda, \
+from sexpr import Symbol, Cell, Nil, Number, Lambda, \
     BuiltinFunction, BuiltinSpecialForm, Macro
 import sclist as sc
 
