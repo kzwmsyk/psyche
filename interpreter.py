@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from sexpr import Sexpr, Symbol, Cell, Nil, NIL, \
     BuiltinFunction, BuiltinSpecialForm, Lambda, Macro, \
-    Number, Boolean, BOOLEAN_T
+    Number, Boolean
 import sclist as sl
 import scpredicates as sp
 import builtin
