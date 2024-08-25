@@ -16,6 +16,7 @@ def export() -> dict[str, Callable]:
         "car": BuiltinFunction(f_car),
         "cdr": BuiltinFunction(f_cdr),
         "cons": BuiltinFunction(f_cons),
+        "print": BuiltinFunction(f_print),
     }
 
 
@@ -81,3 +82,8 @@ def f_cdr(args: Sexpr) -> Sexpr:
 def f_cons(args: Sexpr) -> Sexpr:
     (car, cadr) = args.car, args.cdr.car
     return sc.cons(car, cadr)
+
+
+def f_print(args: Sexpr) -> Sexpr:
+    print(args.car)
+    return NIL
