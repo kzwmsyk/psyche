@@ -19,19 +19,20 @@ def main():
     reader = Reader(scanner)
     interpreter = Interpreter()
     printer = Printer()
-    try:
-        while True:
+    while True:
+        try:
             print("pysche> ", end="")
             sys.stdout.flush()
             printer.repr_print(interpreter.eval(reader.read()))
             print()
-
-    except KeyboardInterrupt:
-        print("\nKeyboardInterrupt")
-    except EOFError:
-        print("\nexit")
-    except Exception as e:
-        logger.exception("error: %s", e)
+        except KeyboardInterrupt:
+            print("\nKeyboardInterrupt")
+            break
+        except EOFError:
+            print("\nexit")
+            break
+        except Exception as e:
+            logger.exception("error: %s", e)
 
 
 if __name__ == "__main__":

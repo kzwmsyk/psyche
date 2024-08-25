@@ -1,4 +1,6 @@
-from common import Sexpr, Symbol, Cell, Atom, Nil, Number, is_cell, is_nil
+from sexpr import Sexpr, Symbol, Cell, Atom, Nil, Number, Lambda, \
+    BuiltinFunction, BuiltinSpecialForm, Macro
+import sclist as sc
 
 
 class Printer:
@@ -10,6 +12,14 @@ class Printer:
                 print(sexpr.name, end="")
             case Nil():
                 print("nil", end="")
+            case Lambda():
+                print(f"#<lambda ({sexpr.params})>", end="")
+            case BuiltinFunction():
+                print(f"#<builtin ({sexpr.fn})>", end="")
+            case BuiltinSpecialForm():
+                print(f"#<builtin ({sexpr.fn})>", end="")
+            case Macro():
+                print(f"#<macro ({sexpr.params})>", end="")
             case Cell():
                 print("(", end="")
                 self.repr_print_list(sexpr)
@@ -21,13 +31,13 @@ class Printer:
         # sexpr is Cell
         (car, cdr) = (sexpr.car, sexpr.cdr)
 
-        if not is_cell(cdr) and not is_nil(cdr):
+        if not sc.is_cell(cdr) and not sc.is_nil(cdr):
             self.repr_print(car)
             print(" . ", end="")
             self.repr_print(cdr)
             print(")", end="")
         else:
             self.repr_print(car)
-            if not is_nil(cdr):
+            if not sc.is_nil(cdr):
                 print(" ", end="")
             self.repr_print_list(cdr)

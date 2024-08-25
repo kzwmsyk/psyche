@@ -1,7 +1,11 @@
 from typing import IO
-from common import Token, TokenType, Sexpr, Atom, Number, \
-    Symbol, NIL, cons, is_atom
+import sclist as sc
+from sexpr import NIL
 from scanner import Scanner
+from enum import Enum, auto
+from dataclasses import dataclass
+from sctoken import Token, TokenType
+from sexpr import Sexpr, Symbol, Number
 
 
 class Reader:
@@ -18,8 +22,8 @@ class Reader:
             case TokenType.NUMBER:
                 return Number(value=int(token.buffer))
             case TokenType.QUOTE:
-                return cons(Symbol("quote"),
-                            cons(self.read(), NIL))
+                return sc.cons(Symbol("quote"),
+                               sc.cons(self.read(), NIL))
             case TokenType.LPAREN:
                 return self.readlist()
             case _:
@@ -31,11 +35,11 @@ class Reader:
             return NIL
         elif token.token_type == TokenType.DOT:
             cdr = self.read()
-            if is_atom(cdr):
+            if sc.is_atom(cdr):
                 self.scanner.get_token()  # consume RPAREN...?
             return cdr
         else:
             self.scanner.pushback_token(token)
             car = self.read()
             cdr = self.readlist()
-            return cons(car, cdr)
+            return sc.cons(car, cdr)

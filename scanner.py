@@ -2,7 +2,9 @@
 import sys
 from typing import IO
 import re
-from common import Token, TokenType
+from enum import Enum, auto
+from dataclasses import dataclass
+from sctoken import Token, TokenType
 
 EOL = "\n"
 TAB = "\t"
