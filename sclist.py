@@ -1,44 +1,21 @@
 
-from sexpr import Sexpr, Cell, Nil, Symbol, Number, Atom, NIL
+from sexpr import Sexpr, Cell, NIL
+import scpredicates as sp
 
 
 def cons(car: Sexpr, cdr: Sexpr) -> Sexpr:
     return Cell(car, cdr)
 
 
-def is_atom(expr: Sexpr) -> bool:
-    return isinstance(expr, Atom)
-
-
-def is_number(expr: Sexpr) -> bool:
-    return isinstance(expr, Number)
-
-
-def is_symbol(expr: Sexpr) -> bool:
-    return isinstance(expr, Symbol)
-
-
-def is_cell(expr: Sexpr) -> bool:
-    return isinstance(expr, Cell)
-
-
-def is_nil(expr: Sexpr) -> bool:
-    return isinstance(expr, Nil)
-
-
-def is_subr(expr: Sexpr) -> bool:
-    pass
-
-
 def car(expr: Sexpr) -> Sexpr:
-    if is_cell(expr):
+    if sp.is_pair(expr):
         return expr.car
     else:
         return NIL
 
 
 def cdr(sexpr: Sexpr) -> Sexpr:
-    if is_cell(sexpr):
+    if sp.is_pair(sexpr):
         return sexpr.cdr
     else:
         return NIL

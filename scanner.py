@@ -2,8 +2,6 @@
 import sys
 from typing import IO
 import re
-from enum import Enum, auto
-from dataclasses import dataclass
 from sctoken import Token, TokenType
 
 EOL = "\n"
@@ -60,6 +58,14 @@ class Scanner:
         match c:
             case '':
                 return self._create_token(TokenType.EOF)
+            case '#':
+                c = self._get_char()
+                if c == 't':
+                    return self._create_token(TokenType.T)
+                elif c == 'f':
+                    return self._create_token(TokenType.F)
+                else:
+                    raise Exception("Invalid character after #")
             case '(':
                 return self._create_token(TokenType.LPAREN)
             case ')':

@@ -1,24 +1,7 @@
-(define fact 
-    (lambda (n) (
-        if (eq n 1)
-        1 
-        (* n (fact (- n 1)))
-        )
+
+(define atom? 
+    (lambda (sexpr) 
+        (and (not (pair? sexpr)) 
+             (not (null? sexpr)))
     )
 )
-
-
-(define a 'global)
-
-(let ()
-    (define print-a (lambda () (print a)))
-    (print-a)
-    (setq a 'local)
-    (print-a)
-)
-
-
-(define f (lambda (x) (+ (g x) 1)))
-(define g (lambda (y) (* y 2)))
-
-

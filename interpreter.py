@@ -1,8 +1,9 @@
 from contextlib import contextmanager
-from sexpr import Sexpr, Symbol, Cell, Nil, NIL, T, \
+from sexpr import Sexpr, Symbol, Cell, Nil, NIL, \
     BuiltinFunction, BuiltinSpecialForm, Lambda, Macro, \
-    Number
-import sclist as sc
+    Number, Boolean, BOOLEAN_T
+import sclist as sl
+import scpredicates as sp
 import builtin
 import specialform
 from typing import Self
@@ -32,7 +33,6 @@ class Interpreter:
 
         self.global_scope.bind_dict({
             "nil": NIL,
-            "t": T,
         })
 
         self.global_scope.bind_dict(builtin.export())
@@ -52,6 +52,8 @@ class Interpreter:
 
     def eval(self, sexpr: Sexpr) -> Sexpr:
         match sexpr:
+            case Boolean():
+                return sexpr
             case Number():
                 return sexpr
             case Symbol():
@@ -65,10 +67,10 @@ class Interpreter:
                 return sexpr
 
     def eval_list(self, args: Cell | Nil) -> Sexpr:
-        if sc.is_nil(args):
+        if sp.is_null(args):
             return NIL
         else:
-            return sc.cons(self.eval(args.car),
+            return sl.cons(self.eval(args.car),
                            self.eval_list(args.cdr))
 
     def apply(self, func: Sexpr, args: Sexpr) -> Sexpr:
@@ -86,7 +88,7 @@ class Interpreter:
                 with self.new_env(func.env):
                     with self.new_env():
                         self._bind_arg(params, evaled_args)
-                        while not sc.is_nil(body):
+                        while not sp.is_null(body):
                             res = self.eval(body.car)
                             body = body.cdr
                         return res
@@ -97,7 +99,7 @@ class Interpreter:
                 raise Exception(f"Unknown function: {func}")
 
     def _bind_arg(self, params: Cell, args: Sexpr):
-        while not sc.is_nil(params):
+        while not sp.is_null(params):
             param = params.car
             arg = args.car
             self.bind(param.name, arg)

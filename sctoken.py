@@ -11,6 +11,8 @@ class TokenType(Enum):
     SYMBOL = auto()
     OTHER = auto()
     EOF = auto()
+    T = auto()
+    F = auto()
 
 
 @ dataclass

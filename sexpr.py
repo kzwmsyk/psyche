@@ -13,6 +13,15 @@ class Atom(Sexpr):
 
 
 @dataclass
+class Boolean(Atom):
+    value: bool
+
+
+BOOLEAN_T = Boolean(True)
+BOOLEAN_F = Boolean(False)
+
+
+@dataclass
 class Number(Atom):
     value: int | float
 
@@ -34,6 +43,9 @@ class Nil(Symbol):
 
     def __str__(self):
         return "()"
+
+
+NIL = Nil()
 
 
 @dataclass
@@ -68,7 +80,3 @@ class BuiltinFunction(Sexpr):
 @dataclass
 class BuiltinSpecialForm(Sexpr):
     fn: Callable
-
-
-NIL = Nil()
-T = Symbol("t")
