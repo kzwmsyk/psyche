@@ -55,8 +55,10 @@ def f_plus(args: Sexpr) -> Sexpr:
 
 def f_minus(args: Sexpr) -> Sexpr:
     lst = _to_list(args)
-    print(lst)
-    return Number(reduce(lambda x, y: x - y, lst))
+    if len(lst) == 1:
+        return Number(-lst[0])
+    else:
+        return Number(reduce(lambda x, y: x - y, lst))
 
 
 def f_multi(args: Sexpr) -> Sexpr:

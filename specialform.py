@@ -52,12 +52,42 @@ def f_set_bang(evaluator, args: Sexpr) -> Sexpr:
     evaluator.bind(sl.car(args).name, evaluator.eval(sl.cadr(args)))
     return NIL
 
-# (defun name (params...) body)
-
 
 def f_define(evaluator, args: Sexpr) -> Sexpr:
-    evaluator.bind(sl.car(args).name, evaluator.eval(sl.cadr(args)))
-    return NIL
+
+    car = sl.car(args)
+
+    if sp.is_symbol(car):
+        # (define var expr)
+        evaluator.bind(car.name, evaluator.eval(sl.cadr(args)))
+        return NIL
+
+    elif sp.is_list(car):
+        # (define (fn params...) body)
+        fn = sl.car(car)
+        params = sl.cdr(car)
+        body = sl.cdr(args)
+
+        lambda_ = Lambda(params=params,
+                         body=body,
+                         env=evaluator.current_scope)
+        evaluator.bind(fn.name, lambda_)
+        return NIL
+
+    elif sp.is_pair(car) and not sp.is_null(sl.cdr(car)):
+        # (define (fn . param) body)
+        fn = sl.car(car)
+        param = sl.cdr(car)
+        body = sl.cdr(args)
+
+        lambda_ = Lambda(params=sl.cons(param, NIL),
+                         body=body,
+                         env=evaluator.current_scope)
+        evaluator.bind(fn.name, lambda_)
+        return NIL
+
+    else:
+        raise Exception("Invalid define syntax")
 
 
 # def f_defun(evaluator, args: Sexpr) -> Sexpr:

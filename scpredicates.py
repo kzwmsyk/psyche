@@ -73,3 +73,12 @@ def is_falsy(expr: Sexpr) -> bool:
 
 def is_atom(expr: Sexpr) -> bool:
     return not is_pair(expr) and not is_null(expr)
+
+
+def is_list(expr: Sexpr) -> bool:
+    if is_null(expr):
+        return True
+    elif is_pair(expr):
+        return is_list(expr.cdr)
+    else:
+        return False
