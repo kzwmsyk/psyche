@@ -11,6 +11,7 @@ def export() -> dict[str, Callable]:
         "-": BuiltinFunction(f_minus),
         "*": BuiltinFunction(f_multi),
         "/": BuiltinFunction(f_div),
+
         "eq": BuiltinFunction(f_eq),
         "car": BuiltinFunction(f_car),
         "cdr": BuiltinFunction(f_cdr),
@@ -34,27 +35,24 @@ def export() -> dict[str, Callable]:
     }
 
 
-def _to_list(args: Sexpr) -> list[int]:
-    if sp.is_null(args):
-        return []
-    else:
-        return [args.car.value] + _to_list(args.cdr)
+def _to_values(args: Sexpr) -> list[int]:
+    return [x.value for x in sl.to_python_list(args)]
 
 
-def _to_boolean(bool: bool) -> Sexpr:
+def _to_lisp_boolean(bool: bool) -> Sexpr:
     return BOOLEAN_T if bool else BOOLEAN_F
 
 
 def f_not(args: Sexpr) -> Sexpr:
-    return _to_boolean(not sp.is_truthy(args.car))
+    return _to_lisp_boolean(not sp.is_truthy(args.car))
 
 
 def f_plus(args: Sexpr) -> Sexpr:
-    return Number(sum(_to_list(args)))
+    return Number(sum(_to_values(args)))
 
 
 def f_minus(args: Sexpr) -> Sexpr:
-    lst = _to_list(args)
+    lst = _to_values(args)
     if len(lst) == 1:
         return Number(-lst[0])
     else:
@@ -62,11 +60,11 @@ def f_minus(args: Sexpr) -> Sexpr:
 
 
 def f_multi(args: Sexpr) -> Sexpr:
-    return Number(reduce(lambda x, y: x * y, _to_list(args), 1))
+    return Number(reduce(lambda x, y: x * y, _to_values(args), 1))
 
 
 def f_div(args: Sexpr) -> Sexpr:
-    lst = _to_list(args)
+    lst = _to_values(args)
     return Number(reduce(lambda x, y: x / y, lst))
 
 
@@ -81,7 +79,7 @@ def f_eq(args: Sexpr) -> Sexpr:
         else:
             return car == cadr
 
-    return _to_boolean(_eq(car, cadr))
+    return _to_lisp_boolean(_eq(car, cadr))
 
 
 def f_car(args: Sexpr) -> Sexpr:
@@ -105,48 +103,48 @@ def f_print(args: Sexpr) -> Sexpr:
 
 
 def f_boolean_p(args: Sexpr) -> Sexpr:
-    return _to_boolean(sp.is_boolean(args.car))
+    return _to_lisp_boolean(sp.is_boolean(args.car))
 
 
 def f_char_p(args: Sexpr) -> Sexpr:
-    return _to_boolean(sp.is_char(args.car))
+    return _to_lisp_boolean(sp.is_char(args.car))
 
 
 def f_null_p(args: Sexpr) -> Sexpr:
-    return _to_boolean(sp.is_null(args.car))
+    return _to_lisp_boolean(sp.is_null(args.car))
 
 
 def f_pair_p(args: Sexpr) -> Sexpr:
-    return _to_boolean(sp.is_pair(args.car))
+    return _to_lisp_boolean(sp.is_pair(args.car))
 
 
 def f_procedure_p(args: Sexpr) -> Sexpr:
-    return _to_boolean(sp.is_procedure(args.car))
+    return _to_lisp_boolean(sp.is_procedure(args.car))
 
 
 def f_symbol_p(args: Sexpr) -> Sexpr:
-    return _to_boolean(sp.is_symbol(args.car))
+    return _to_lisp_boolean(sp.is_symbol(args.car))
 
 
 def f_bytevector_p(args: Sexpr) -> Sexpr:
-    return _to_boolean(sp.is_bytevector(args.car))
+    return _to_lisp_boolean(sp.is_bytevector(args.car))
 
 
 def f_eof_object_p(args: Sexpr) -> Sexpr:
-    return _to_boolean(sp.is_eof_object(args.car))
+    return _to_lisp_boolean(sp.is_eof_object(args.car))
 
 
 def f_number_p(args: Sexpr) -> Sexpr:
-    return _to_boolean(sp.is_number(args.car))
+    return _to_lisp_boolean(sp.is_number(args.car))
 
 
 def f_port_p(args: Sexpr) -> Sexpr:
-    return _to_boolean(sp.is_port(args.car))
+    return _to_lisp_boolean(sp.is_port(args.car))
 
 
 def f_string_p(args: Sexpr) -> Sexpr:
-    return _to_boolean(sp.is_string(args.car))
+    return _to_lisp_boolean(sp.is_string(args.car))
 
 
 def f_vector_p(args: Sexpr) -> Sexpr:
-    return _to_boolean(sp.is_vector(args.car))
+    return _to_lisp_boolean(sp.is_vector(args.car))

@@ -1,50 +1,54 @@
-from sexpr import Symbol, Cell, Nil, Number, Lambda, \
+from sexpr import Sexpr, Symbol, Cell, Nil, Number, Lambda, \
     BuiltinFunction, BuiltinSpecialForm, Macro, \
     Boolean
 import scpredicates as sp
 
 
 class Printer:
+
     def repr_print(self, sexpr):
+        print(self.to_string(sexpr))
+
+    def to_string(self, sexpr):
         match sexpr:
             case Number():
-                print(str(sexpr.value), end="")
+                return str(sexpr.value)
             case Symbol():
-                print(sexpr.name, end="")
+                return sexpr.name
             case Nil():
-                print("nil", end="")
+                return "nil"
             case Boolean():
                 if sp.is_truthy(sexpr):
-                    print("#t", end="")
+                    return "#t"
                 else:
-                    print("#f", end="")
+                    return "#f"
             case Lambda():
-                print(f"#<lambda ({sexpr.params})>", end="")
+                return f"#<lambda ({sexpr.params})>"
             case BuiltinFunction():
-                print(f"#<builtin ({sexpr.fn})>", end="")
+                return f"#<builtin ({sexpr.fn})>"
             case BuiltinSpecialForm():
-                print(f"#<builtin ({sexpr.fn})>", end="")
+                return f"#<builtin ({sexpr.fn})>"
             case Macro():
-                print(f"#<macro ({sexpr.params})>", end="")
+                return f"#<macro ({sexpr.params})>"
             case Cell():
-                print("(", end="")
-                self.repr_print_list(sexpr)
+                return "(" + self.to_string_list(sexpr)
 
-    def repr_print_list(self, sexpr: Cell | Nil):
+    def to_string_list(self, sexpr: Cell | Nil):
         if sp.is_null(sexpr):
-            print(")", end="")
-            return
+            return ")"
 
         # sexpr is Cell
         (car, cdr) = (sexpr.car, sexpr.cdr)
 
         if not sp.is_pair(cdr) and not sp.is_null(cdr):
-            self.repr_print(car)
-            print(" . ", end="")
-            self.repr_print(cdr)
-            print(")", end="")
+            return f"{self.to_string(car)} . {self.to_string(cdr)})"
         else:
-            self.repr_print(car)
+            buf = self.to_string(car)
             if not sp.is_null(cdr):
-                print(" ", end="")
-            self.repr_print_list(cdr)
+                buf += " "
+            buf += self.to_string_list(cdr)
+            return buf
+
+
+DEBUG_PRINTER = Printer()
+Sexpr.printer = DEBUG_PRINTER

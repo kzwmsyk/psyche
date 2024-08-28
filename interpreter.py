@@ -81,13 +81,35 @@ class Interpreter:
             case BuiltinFunction():
                 return func.fn(self.eval_list(args))
             case Lambda():
-                params = func.params
                 body = func.body
+                params = func.params
+                fixed_params = []
+                rest_param = None
+
+                if sp.is_symbol(params):
+                    # (lambda x body)
+                    rest_param = params
+                elif sp.is_list(params):
+                    # (lambda (x y ...) body)
+                    fixed_params = [p for p in sl.to_python_list(params)]
+                elif sp.is_pair(params):
+                    # (lambda (x y z ... . rest) body)
+                    car = params.car
+                    cdr = params.cdr
+                    while sp.is_pair(cdr):
+                        logger.debug(f"car:{car} cdr:{cdr}")
+                        fixed_params.append(car)
+                        car = cdr.car
+                        cdr = cdr.cdr
+
+                    fixed_params.append(car)
+                    rest_param = cdr
+
                 evaled_args = self.eval_list(args)
 
                 with self.new_env(func.env):
                     with self.new_env():
-                        self._bind_arg(params, evaled_args)
+                        self._bind_arg(fixed_params, rest_param, evaled_args)
                         while not sp.is_null(body):
                             res = self.eval(body.car)
                             body = body.cdr
@@ -98,13 +120,17 @@ class Interpreter:
             case _:
                 raise Exception(f"Unknown function: {func}")
 
-    def _bind_arg(self, params: Cell, args: Sexpr):
-        while not sp.is_null(params):
-            param = params.car
-            arg = args.car
-            self.bind(param.name, arg)
-            params = params.cdr
+    def _bind_arg(self,
+                  fixed_params: list[Symbol] = [],
+                  rest_param: Symbol | None = None,
+                  args: Sexpr = NIL):
+
+        for fixed_param in fixed_params:
+            self.bind(fixed_param.name, args.car)
             args = args.cdr
+
+        if rest_param is not None:
+            self.bind(rest_param.name, args)
 
     def find_symbol(self, symbol: Symbol) -> Sexpr:
         scope = self.current_scope

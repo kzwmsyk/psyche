@@ -4,6 +4,7 @@ import sys
 from scanner import Scanner
 from reader import Reader
 from printer import Printer
+from sexpr import Sexpr
 from interpreter import Interpreter
 import logging
 

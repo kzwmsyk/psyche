@@ -90,15 +90,6 @@ def f_define(evaluator, args: Sexpr) -> Sexpr:
         raise Exception("Invalid define syntax")
 
 
-# def f_defun(evaluator, args: Sexpr) -> Sexpr:
-#     symbol = sc.car(args)
-#     params = sc.cadr(args)
-#     body = sc.cddr(args)
-#     fn = Lambda(params, body, evaluator.current_scope)
-#     evaluator.bind(symbol.name, fn)
-#     return fn
-
-
 def f_lambda(evaluator, args: Sexpr) -> Sexpr:
     params = sl.car(args)
     body = sl.cdr(args)

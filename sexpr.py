@@ -4,7 +4,13 @@ from typing import Callable
 
 
 class Sexpr:
-    pass
+    printer = None
+
+    def __str__(self):
+        return self.printer.to_string(self)
+
+    def __repr__(self):
+        return self.printer.to_string(self)
 
 
 @dataclass
@@ -25,24 +31,15 @@ BOOLEAN_F = Boolean(False)
 class Number(Atom):
     value: int | float
 
-    def __str__(self):
-        return str(self.value)
-
 
 @dataclass
 class Symbol(Atom):
     name: str
 
-    def __str__(self):
-        return f"Symbol({self.name})"
-
 
 class Nil(Symbol):
     def __init__(self):
         super().__init__("nil")
-
-    def __str__(self):
-        return "()"
 
 
 NIL = Nil()
@@ -52,9 +49,6 @@ NIL = Nil()
 class Cell(Sexpr):
     car: Sexpr = None
     cdr: Sexpr = None
-
-    def __str__(self):
-        return f"({self.car} . {self.cdr})"
 
 
 class Lambda(Sexpr):
