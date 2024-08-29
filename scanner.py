@@ -74,6 +74,10 @@ class Scanner:
                 return self._create_token(TokenType.QUOTE)
             case '.':
                 return self._create_token(TokenType.DOT)
+            case ';':
+                while c != EOL:
+                    c = self._get_char()
+                return self.get_token()
             case _:
                 buf = c
                 while ((c := self._get_char())

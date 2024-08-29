@@ -18,6 +18,7 @@ def export() -> dict[str, Callable]:
         "let": BuiltinSpecialForm(f_let),
         "and": BuiltinSpecialForm(f_and),
         "or": BuiltinSpecialForm(f_or),
+        "apply": BuiltinSpecialForm(f_apply),
     }
 
 
@@ -62,25 +63,16 @@ def f_define(evaluator, args: Sexpr) -> Sexpr:
         evaluator.bind(car.name, evaluator.eval(sl.cadr(args)))
         return NIL
 
-    elif sp.is_list(car):
-        # (define (fn params...) body)
+    elif sp.is_pair(car):
+        # (define (fn x y z ...) body)
+        # (define (fn x y z ... . rest) body)
+        # (define (fn . rest) body)
+
         fn = sl.car(car)
         params = sl.cdr(car)
         body = sl.cdr(args)
 
         lambda_ = Lambda(params=params,
-                         body=body,
-                         env=evaluator.current_scope)
-        evaluator.bind(fn.name, lambda_)
-        return NIL
-
-    elif sp.is_pair(car) and not sp.is_null(sl.cdr(car)):
-        # (define (fn . param) body)
-        fn = sl.car(car)
-        param = sl.cdr(car)
-        body = sl.cdr(args)
-
-        lambda_ = Lambda(params=sl.cons(param, NIL),
                          body=body,
                          env=evaluator.current_scope)
         evaluator.bind(fn.name, lambda_)
@@ -119,3 +111,12 @@ def f_let(evaluator, args: Sexpr) -> Sexpr:
             res = evaluator.eval(body.car)
             body = body.cdr
         return res
+
+
+def f_apply(evaluator, args: Sexpr) -> Sexpr:
+    # this supports (apply fn args) [args is a proper list]
+    # TODO: support (apply fn arg1 arg2 ... . argn) [argn are proper list]
+
+    proc = args.car
+    arg = sl.cadr(args)
+    return evaluator.eval(sl.cons(proc, evaluator.eval(arg)))

@@ -6,6 +6,22 @@
     )
 )
 
+(define (length list)
+    (if (null? list)
+        0
+        (+ 1 (length (cdr list)))
+    )
+)
+
+
+(define (list . args)
+    (if (null? args)
+        ()
+        (cons (car args) (apply list (cdr args)))
+    )
+)
+
+    
 (define (caar cell) (car (car cell)))
 (define (cadr cell) (car (cdr cell)))
 (define (cdar cell) (cdr (car cell)))

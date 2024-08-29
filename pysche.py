@@ -37,6 +37,7 @@ def main():
             break
         except Exception as e:
             logger.exception("error: %s", e)
+            pass
 
 
 def prelude(interpreter: Interpreter):

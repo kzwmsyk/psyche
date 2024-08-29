@@ -73,9 +73,9 @@ def f_eq(args: Sexpr) -> Sexpr:
 
     def _eq(car: Sexpr, cadr: Sexpr) -> bool:
         if sp.is_symbol(car):
-            return sl.is_symbol(cadr) and car.name == cadr.name
+            return sp.is_symbol(cadr) and car.name == cadr.name
         elif sp.is_number(car):
-            return sl.is_number(cadr) and car.value == cadr.value
+            return sp.is_number(cadr) and car.value == cadr.value
         else:
             return car == cadr
 
