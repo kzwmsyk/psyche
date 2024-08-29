@@ -25,7 +25,7 @@ def main():
     printer = Printer()
     while True:
         try:
-            print("pysche> ", end="")
+            print("psyche> ", end="")
             sys.stdout.flush()
             printer.repr_print(interpreter.eval(reader.read()))
             print()
