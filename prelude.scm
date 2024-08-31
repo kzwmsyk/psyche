@@ -13,12 +13,7 @@
     )
 )
 
-(define (list . args)
-    (if (null? args)
-        ()
-        (cons (car args) (apply list (cdr args)))
-    )
-)
+(define (list . x) x)
 
 (define (list? lst)
     (if (null? lst)
