@@ -26,7 +26,7 @@ class Env:
             self.env[name] = sexpr
 
 
-class Interpreter:
+class Evaluator:
     def __init__(self):
         self.global_scope = Env(None)
         self.current_scope = self.global_scope

@@ -4,8 +4,7 @@ import sys
 from scanner import Scanner
 from reader import Reader
 from printer import Printer
-from sexpr import Sexpr
-from interpreter import Interpreter
+from evaluator import Evaluator
 import logging
 
 logging.basicConfig(
@@ -16,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    interpreter = Interpreter()
-    prelude(interpreter)
+    evaluator = Evaluator()
+    prelude(evaluator)
 
     scanner = Scanner(stream=sys.stdin)
     reader = Reader(scanner)
@@ -27,7 +26,7 @@ def main():
         try:
             print("psyche> ", end="")
             sys.stdout.flush()
-            printer.repr_print(interpreter.eval(reader.read()))
+            printer.repr_print(evaluator.eval(reader.read()))
             print()
         except KeyboardInterrupt:
             print("\nKeyboardInterrupt")
@@ -40,14 +39,14 @@ def main():
             pass
 
 
-def prelude(interpreter: Interpreter):
+def prelude(envaluator: Evaluator):
     with open("prelude.scm", "r") as f:
         reader = Reader(Scanner(stream=f))
         while True:
             sexpr = reader.read()
             if sexpr is None:
                 break
-            interpreter.eval(sexpr)
+            envaluator.eval(sexpr)
 
 
 if __name__ == "__main__":
