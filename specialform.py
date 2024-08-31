@@ -18,7 +18,7 @@ def export() -> dict[str, Callable]:
         "let": BuiltinSpecialForm(f_let),
         "and": BuiltinSpecialForm(f_and),
         "or": BuiltinSpecialForm(f_or),
-        "apply": BuiltinSpecialForm(f_apply),
+        "begin": BuiltinSpecialForm(f_begin),
     }
 
 
@@ -112,11 +112,17 @@ def f_let(evaluator, args: Sexpr) -> Sexpr:
             body = body.cdr
         return res
 
+# TODO: (let* ...)
+# TODO: (letrec ...)
+# TODO: (let-values ...)
+# TODO: (let*-values ...)
+# TODO: (letrec-values ...)
+# TODO: (letrec*-values ...)
 
-def f_apply(evaluator, args: Sexpr) -> Sexpr:
-    # this supports (apply fn args) [args is a proper list]
-    # TODO: support (apply fn arg1 arg2 ... . argn) [argn are proper list]
 
-    proc = args.car
-    arg = sl.cadr(args)
-    return evaluator.eval(sl.cons(proc, evaluator.eval(arg)))
+def f_begin(evaluator, args: Sexpr) -> Sexpr:
+    ret = NIL
+    while not sp.is_null(args):
+        ret = evaluator.eval(args.car)
+        args = args.cdr
+    return ret

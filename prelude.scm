@@ -13,7 +13,6 @@
     )
 )
 
-
 (define (list . args)
     (if (null? args)
         ()

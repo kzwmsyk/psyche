@@ -74,6 +74,14 @@ class Scanner:
                 return self._create_token(TokenType.QUOTE)
             case '.':
                 return self._create_token(TokenType.DOT)
+            case '"':
+                buf = ""
+                while (c := self._get_char()) != '"':
+                    if c == '\\':
+                        buf += self._escape_char()
+                    else:
+                        buf += c
+                return self._create_token(TokenType.STRING, buf)
             case ';':
                 while c != EOL:
                     c = self._get_char()
@@ -101,6 +109,27 @@ class Scanner:
                      buffer=buffer,
                      line=self.line,
                      col=self.col - len(buffer or " "))
+
+    ESCAPE_CHARS = {
+        'a': "\a",
+        'b': "\b",
+        't': "\t",
+        'n': "\n",
+        'r': "\r",
+        '"': '"',
+        '\\': '\\',
+        '|': '|',
+        # TODO:
+        # "<intraline whitespace>*<line ending>"
+        # "x<hex scalar value>"
+    }
+
+    def _escape_char(self) -> str:
+        c = self._get_char()
+        if c in self.ESCAPE_CHARS:
+            return self.ESCAPE_CHARS[c]
+        else:
+            raise Exception("Invalid escape character")
 
     def _number_token(self, buf: str) -> bool:
         return re.match(r'^[+\-]?\d+$', buf) is not None

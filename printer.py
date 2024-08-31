@@ -1,6 +1,6 @@
 from sexpr import Sexpr, Symbol, Cell, Nil, Number, Lambda, \
     BuiltinFunction, BuiltinSpecialForm, Macro, \
-    Boolean
+    Boolean, String
 import scpredicates as sp
 
 
@@ -22,6 +22,8 @@ class Printer:
                     return "#t"
                 else:
                     return "#f"
+            case String():
+                return f'"{sexpr.value}"'
             case Lambda():
                 return f"#<lambda ({sexpr.params})>"
             case BuiltinFunction():

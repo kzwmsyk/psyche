@@ -1,5 +1,5 @@
 
-from sexpr import Sexpr, Cell, Nil, Symbol, Number, \
+from sexpr import Sexpr, Cell, Nil, Symbol, Number, String, \
     BOOLEAN_T, BOOLEAN_F
 
 
@@ -55,7 +55,7 @@ def is_port(expr: Sexpr) -> bool:
 
 def is_string(expr: Sexpr) -> bool:
     "string?"
-    pass
+    return isinstance(expr, String)
 
 
 def is_vector(expr: Sexpr) -> bool:

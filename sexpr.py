@@ -28,6 +28,11 @@ BOOLEAN_F = Boolean(False)
 
 
 @dataclass
+class String(Atom):
+    value: str
+
+
+@dataclass
 class Number(Atom):
     value: int | float
 

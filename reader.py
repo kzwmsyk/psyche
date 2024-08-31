@@ -2,7 +2,7 @@ import sclist as sl
 from sexpr import NIL, BOOLEAN_T, BOOLEAN_F
 from scanner import Scanner
 from sctoken import TokenType
-from sexpr import Sexpr, Symbol, Number
+from sexpr import Sexpr, Symbol, Number, String
 from logging import getLogger
 
 logger = getLogger(__name__)
@@ -22,6 +22,8 @@ class Reader:
                 return Symbol(name=token.buffer)
             case TokenType.NUMBER:
                 return Number(value=int(token.buffer))
+            case TokenType.STRING:
+                return String(value=token.buffer)
             case TokenType.T:
                 return BOOLEAN_T
             case TokenType.F:

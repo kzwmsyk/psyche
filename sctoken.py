@@ -13,6 +13,7 @@ class TokenType(Enum):
     EOF = auto()
     T = auto()
     F = auto()
+    STRING = auto()
 
 
 @ dataclass
