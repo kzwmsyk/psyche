@@ -79,7 +79,7 @@ class Evaluator:
             case BuiltinSpecialForm():
                 return func.fn(self, args)
             case BuiltinFunction():
-                return func.fn(self.eval_list(args), interpreter=self)
+                return func.fn(self.eval_list(args), evaluator=self)
             case Lambda():
                 body = func.body
                 params = func.params

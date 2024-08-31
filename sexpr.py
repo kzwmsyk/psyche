@@ -27,7 +27,7 @@ BOOLEAN_T = Boolean(True)
 BOOLEAN_F = Boolean(False)
 
 
-@dataclass
+@dataclass(eq=False)
 class String(Atom):
     value: str
 
@@ -42,6 +42,21 @@ class Symbol(Atom):
     name: str
 
 
+@dataclass(eq=False)
+class Bytevector(Atom):
+    value: bytes
+
+
+@dataclass(eq=False)
+class Vector(Atom):
+    value: list[Sexpr]
+
+
+@dataclass
+class Char(Atom):
+    value: str
+
+
 class Nil(Symbol):
     def __init__(self):
         super().__init__("nil")
@@ -50,7 +65,7 @@ class Nil(Symbol):
 NIL = Nil()
 
 
-@dataclass
+@dataclass(eq=False)
 class Cell(Sexpr):
     car: Sexpr = None
     cdr: Sexpr = None

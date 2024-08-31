@@ -1,4 +1,5 @@
-from sexpr import Sexpr, Number, NIL, BOOLEAN_T, BOOLEAN_F, BuiltinFunction
+from sexpr import Sexpr, Number, NIL, BOOLEAN_T, BOOLEAN_F, BuiltinFunction, \
+    Boolean, String, Symbol, Char, Bytevector, Vector, Nil, Cell
 import sclist as sl
 import scpredicates as sp
 from typing import Callable
@@ -14,7 +15,9 @@ def export() -> dict[str, Callable]:
         "*": BuiltinFunction(f_multi),
         "/": BuiltinFunction(f_div),
 
-        "eq": BuiltinFunction(f_eq),
+        "eq?": BuiltinFunction(f_eq),
+        "eqv?": BuiltinFunction(f_eqv),
+        "equal?": BuiltinFunction(f_equal),
         "car": BuiltinFunction(f_car),
         "cdr": BuiltinFunction(f_cdr),
         "cons": BuiltinFunction(f_cons),
@@ -74,16 +77,55 @@ def f_div(args: Sexpr, evaluator=None) -> Sexpr:
 
 def f_eq(args: Sexpr, evaluator=None) -> Sexpr:
     (car, cadr) = args.car, args.cdr.car
+    # TODO: eqv?との違いをきちんと実装する
+    return _to_lisp_boolean(_eqv(car, cadr))
 
-    def _eq(car: Sexpr, cadr: Sexpr) -> bool:
-        if sp.is_symbol(car):
+
+def _eqv(car: Sexpr, cadr: Sexpr) -> bool:
+    match car:
+        case Boolean():
+            return sp.is_boolean(cadr) and car.value == cadr.value
+        case Symbol():
             return sp.is_symbol(cadr) and car.name == cadr.name
-        elif sp.is_number(car):
+        case Number():
+            # TODO: 不正確な数値の場合を考慮しないといけない
             return sp.is_number(cadr) and car.value == cadr.value
-        else:
-            return car == cadr
+        case Bytevector():
+            pass
+        case Char():
+            pass
+        case Nil():
+            return sp.is_null(cadr)
+        case _:
+            return car is cadr
 
-    return _to_lisp_boolean(_eq(car, cadr))
+
+def f_eqv(args: Sexpr, evaluator=None) -> Sexpr:
+    (car, cadr) = args.car, args.cdr.car
+    return _to_lisp_boolean(_eqv(car, cadr))
+
+
+def f_equal(args: Sexpr, evaluator=None) -> Sexpr:
+    if f_eqv(args):
+        return BOOLEAN_T
+    (car, cadr) = args.car, args.cdr.car
+
+    def _equal(car: Sexpr, cadr: Sexpr) -> bool:
+        if _eqv(car, cadr):
+            return True
+
+        match car:
+            case String():
+                return sp.is_string(cadr) and car.value == cadr.value
+            case Bytevector():
+                pass
+            case Vector():
+                pass
+            case Cell():
+                return (sp.is_pair(cadr)
+                        and _equal(car.car, cadr.car)
+                        and _equal(car.cdr, cadr.cdr))
+    return _to_lisp_boolean(car == cadr)
 
 
 def f_car(args: Sexpr, evaluator=None) -> Sexpr:
