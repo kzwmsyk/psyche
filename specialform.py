@@ -1,6 +1,7 @@
 import logging
 from typing import Callable
-from sexpr import Sexpr, NIL, BuiltinSpecialForm, Lambda, BOOLEAN_T, BOOLEAN_F
+from sexpr import Sexpr, NIL, BuiltinSpecialForm, Lambda, \
+    BOOLEAN_T, BOOLEAN_F, Symbol
 
 import sclist as sl
 import scpredicates as sp
@@ -13,6 +14,7 @@ def export() -> dict[str, Callable]:
         "if": BuiltinSpecialForm(f_if),
         "set!": BuiltinSpecialForm(f_set_bang),
         "quote": BuiltinSpecialForm(f_quote),
+        "quasiquote": BuiltinSpecialForm(f_quasiquote),
         "lambda": BuiltinSpecialForm(f_lambda),
         "define": BuiltinSpecialForm(f_define),
         "let": BuiltinSpecialForm(f_let),
@@ -95,6 +97,53 @@ def f_quote(evaluator, args: Sexpr) -> Sexpr:
     return sl.car(args)
 
 
+def f_quasiquote(evaluator, args: Sexpr) -> Sexpr:
+    sexpr = sl.car(args)
+    return _expand_quasiquote(evaluator, sexpr)
+
+
+def _expand_quasiquote(evaluator, sexpr: Sexpr) -> Sexpr:
+    if not sp.is_pair(sexpr):
+        return sexpr
+
+    elif sp.is_pair(sexpr) and sl.car(sexpr) == Symbol("unquote"):
+        # ,expr => (unquote expr) => eval(expr)
+        return evaluator.eval(sl.cadr(sexpr))
+
+    elif sp.is_pair(sexpr):
+        # (not-unquote ... ,@expr ...)
+        # => (not-unquote... (unquote-splicing expr) ...)
+        # or
+        # (,@expr ...)
+        # => ((unquote-splicing expr) ...)
+        # by recursion.
+
+        car = sl.car(sexpr)
+        cdr = sl.cdr(sexpr)
+
+        if sp.is_pair(car) and car.car == Symbol("unquote-splicing"):
+            ls = evaluator.eval(sl.cadr(car))
+            if not sp.is_list(ls):
+                raise Exception("Unquote-splicing must be a list")
+
+            return _append(ls, _expand_quasiquote(evaluator, cdr))
+        else:
+            return sl.cons(_expand_quasiquote(evaluator, car),
+                           _expand_quasiquote(evaluator, cdr))
+
+
+def _append(ls: Sexpr, elem: Sexpr) -> Sexpr:
+    assert sp.is_list(ls)
+
+    if sp.is_null(ls):
+        if sp.is_list(elem):
+            return elem
+        else:
+            return sl.cons(elem, NIL)
+    else:
+        return sl.cons(ls.car, _append(ls.cdr, elem))
+
+
 def f_let(evaluator, args: Sexpr) -> Sexpr:
     vars = sl.car(args)
     body = sl.cdr(args)
@@ -126,3 +175,8 @@ def f_begin(evaluator, args: Sexpr) -> Sexpr:
         ret = evaluator.eval(args.car)
         args = args.cdr
     return ret
+
+
+def f_define_syntax(evaluator, args: Sexpr) -> Sexpr:
+
+    pass

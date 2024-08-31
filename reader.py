@@ -33,6 +33,21 @@ class Reader:
                 quote = sl.cons(Symbol("quote"),
                                 sl.cons(read, NIL))
                 return quote
+            case TokenType.QUASIQUOTE:
+                read = self.read()
+                quote = sl.cons(Symbol("quasiquote"),
+                                sl.cons(read, NIL))
+                return quote
+            case TokenType.UNQUOTE:
+                read = self.read()
+                quote = sl.cons(Symbol("unquote"),
+                                sl.cons(read, NIL))
+                return quote
+            case TokenType.UNQUOTE_SPLICING:
+                read = self.read()
+                quote = sl.cons(Symbol("unquote-splicing"),
+                                sl.cons(read, NIL))
+                return quote
             case TokenType.LPAREN:
                 return self.readlist()
             case _:

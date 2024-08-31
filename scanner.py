@@ -72,6 +72,15 @@ class Scanner:
                 return self._create_token(TokenType.RPAREN)
             case "'":
                 return self._create_token(TokenType.QUOTE)
+            case "`":
+                return self._create_token(TokenType.QUASIQUOTE)
+            case ",":
+                c = self._get_char()
+                if c == "@":
+                    return self._create_token(TokenType.UNQUOTE_SPLICING)
+                else:
+                    self._pushback_char(c)
+                    return self._create_token(TokenType.UNQUOTE)
             case '.':
                 return self._create_token(TokenType.DOT)
             case '"':
