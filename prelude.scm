@@ -6,33 +6,40 @@
     )
 )
 
-(define (length lst)
-    (if (null? lst)
+(define (length ls)
+    (if (null? ls)
         0
-        (+ 1 (length (cdr lst)))
+        (+ 1 (length (cdr ls)))
     )
 )
 
 (define (list . x) x)
 
-(define (list? lst)
-    (if (null? lst)
+(define (list? ls)
+    (if (null? ls)
         #t
-        (and (pair? lst) (list? (cdr lst)))
+        (and (pair? ls) (list? (cdr ls)))
     )
 )
 
-(define (append lst tail)
-    (if (null? lst)
+(define (append ls tail)
+    (if (null? ls)
         tail
-        (cons (car lst) (append (cdr lst) tail))
+        (cons (car ls) (append (cdr ls) tail))
     )
 )
 
-(define (reverse lst)
-    (if (null? lst)
+(define (reverse ls)
+    (if (null? ls)
         ()
-        (append (reverse (cdr lst)) (list (car lst)))
+        (append (reverse (cdr ls)) (list (car ls)))
+    )
+)
+
+(define (list-copy obj)
+    (if (null? obj)
+        nil
+        (cons (car obj) (list-copy (cdr obj)))
     )
 )
 
