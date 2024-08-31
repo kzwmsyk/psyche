@@ -6,10 +6,10 @@
     )
 )
 
-(define (length list)
-    (if (null? list)
+(define (length lst)
+    (if (null? lst)
         0
-        (+ 1 (length (cdr list)))
+        (+ 1 (length (cdr lst)))
     )
 )
 
@@ -20,14 +20,27 @@
     )
 )
 
-(define (list? l)
-    (if (null? l)
+(define (list? lst)
+    (if (null? lst)
         #t
-        (and (pair? l) (list? (cdr l)))
+        (and (pair? lst) (list? (cdr lst)))
     )
 )
 
-    
+(define (append lst tail)
+    (if (null? lst)
+        tail
+        (cons (car lst) (append (cdr lst) tail))
+    )
+)
+
+(define (reverse lst)
+    (if (null? lst)
+        ()
+        (append (reverse (cdr lst)) (list (car lst)))
+    )
+)
+
 (define (caar cell) (car (car cell)))
 (define (cadr cell) (car (cdr cell)))
 (define (cdar cell) (cdr (car cell)))
