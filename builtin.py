@@ -15,12 +15,16 @@ def export() -> dict[str, Callable]:
         "*": BuiltinFunction(f_multi),
         "/": BuiltinFunction(f_div),
 
-        "eq?": BuiltinFunction(f_eq),
-        "eqv?": BuiltinFunction(f_eqv),
-        "equal?": BuiltinFunction(f_equal),
+        "eq?": BuiltinFunction(f_eq_p),
+        "eqv?": BuiltinFunction(f_eqv_p),
+        "equal?": BuiltinFunction(f_equal_p),
+
         "car": BuiltinFunction(f_car),
         "cdr": BuiltinFunction(f_cdr),
         "cons": BuiltinFunction(f_cons),
+        "set-car!": BuiltinFunction(f_set_car_bang),
+        "set-cdr!": BuiltinFunction(f_set_cdr_bang),
+
         "print": BuiltinFunction(f_print),
 
         "not": BuiltinFunction(f_not),
@@ -75,7 +79,7 @@ def f_div(args: Sexpr, evaluator=None) -> Sexpr:
     return Number(reduce(lambda x, y: x / y, lst))
 
 
-def f_eq(args: Sexpr, evaluator=None) -> Sexpr:
+def f_eq_p(args: Sexpr, evaluator=None) -> Sexpr:
     (car, cadr) = args.car, args.cdr.car
     # TODO: eqv?との違いをきちんと実装する
     return _to_lisp_boolean(_eqv(car, cadr))
@@ -100,13 +104,13 @@ def _eqv(car: Sexpr, cadr: Sexpr) -> bool:
             return car is cadr
 
 
-def f_eqv(args: Sexpr, evaluator=None) -> Sexpr:
+def f_eqv_p(args: Sexpr, evaluator=None) -> Sexpr:
     (car, cadr) = args.car, args.cdr.car
     return _to_lisp_boolean(_eqv(car, cadr))
 
 
-def f_equal(args: Sexpr, evaluator=None) -> Sexpr:
-    if f_eqv(args):
+def f_equal_p(args: Sexpr, evaluator=None) -> Sexpr:
+    if f_eqv_p(args):
         return BOOLEAN_T
     (car, cadr) = args.car, args.cdr.car
 
@@ -141,6 +145,22 @@ def f_cdr(args: Sexpr, evaluator=None) -> Sexpr:
 def f_cons(args: Sexpr, evaluator=None) -> Sexpr:
     (car, cadr) = args.car, args.cdr.car
     return sl.cons(car, cadr)
+
+
+def f_set_car_bang(args: Sexpr, evaluator=None) -> Sexpr:
+    (pair, obj) = args.car, args.cdr.car
+    if not sp.is_pair(pair):
+        raise Exception("set-car!: pair required, given: " + str(pair))
+    pair.car = obj
+    return NIL
+
+
+def f_set_cdr_bang(args: Sexpr, evaluator=None) -> Sexpr:
+    (pair, obj) = args.car, args.cdr.car
+    if not sp.is_pair(pair):
+        raise Exception("set-car!: pair required, given: " + str(pair))
+    pair.cdr = obj
+    return NIL
 
 
 def f_print(args: Sexpr, evaluator=None) -> Sexpr:

@@ -20,6 +20,13 @@
     )
 )
 
+(define (list? l)
+    (if (null? l)
+        #t
+        (and (pair? l) (list? (cdr l)))
+    )
+)
+
     
 (define (caar cell) (car (car cell)))
 (define (cadr cell) (car (cdr cell)))
