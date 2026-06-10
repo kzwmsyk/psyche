@@ -62,7 +62,7 @@ def test_comments_are_skipped():
     assert token_buffers("; comment\n42") == ["42", None]
 
 
-def test_invalid_boolean_suffix_raises():
-    scanner = Scanner(stream=io.StringIO("#x"))
+def test_invalid_sharp_suffix_raises():
+    scanner = Scanner(stream=io.StringIO("#q"))
     with pytest.raises(Exception, match="Invalid character after #"):
         scanner.get_token()

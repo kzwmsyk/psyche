@@ -1,4 +1,6 @@
 
+(define (zero? n) (= n 0))
+
 (define atom? 
     (lambda (sexpr) 
         (and (not (pair? sexpr)) 
@@ -42,6 +44,13 @@
         (cons (car obj) (list-copy (cdr obj)))
     )
 )
+
+(define (filter pred ls)
+    (if (null? ls)
+        '()
+        (if (pred (car ls))
+            (cons (car ls) (filter pred (cdr ls)))
+            (filter pred (cdr ls)))))
 
 (define (caar cell) (car (car cell)))
 (define (cadr cell) (car (cdr cell)))

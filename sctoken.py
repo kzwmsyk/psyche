@@ -17,11 +17,16 @@ class TokenType(Enum):
     T = auto()
     F = auto()
     STRING = auto()
+    CHAR = auto()
+    VECTOR = auto()
+    BYTEVECTOR = auto()
 
 
-@ dataclass
+@dataclass
 class Token:
     token_type: TokenType
     buffer: str = None
     col: int = None
     line: int = None
+    number_exact: bool | None = None
+    number_radix: int = 10

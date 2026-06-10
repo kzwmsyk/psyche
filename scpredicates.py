@@ -1,6 +1,6 @@
 
-from sexpr import Sexpr, Cell, Nil, Symbol, Number, String, \
-    BOOLEAN_T, BOOLEAN_F, Lambda, BuiltinFunction
+from sexpr import Sexpr, Cell, Nil, Symbol, Number, String, Char, Vector, \
+    Bytevector, BOOLEAN_T, BOOLEAN_F, Lambda, BuiltinFunction
 
 
 def is_boolean(expr: Sexpr) -> bool:
@@ -10,7 +10,7 @@ def is_boolean(expr: Sexpr) -> bool:
 
 def is_char(expr: Sexpr) -> bool:
     "char?"
-    pass
+    return isinstance(expr, Char)
 
 
 def is_null(expr: Sexpr) -> bool:
@@ -35,12 +35,13 @@ def is_symbol(expr: Sexpr) -> bool:
 
 def is_bytevector(expr: Sexpr) -> bool:
     "bytevector?"
-    pass
+    return isinstance(expr, Bytevector)
 
 
 def is_eof_object(expr: Sexpr) -> bool:
     "eof-object?"
-    pass
+    from ports import EofObject
+    return isinstance(expr, EofObject)
 
 
 def is_number(expr: Sexpr) -> bool:
@@ -50,7 +51,8 @@ def is_number(expr: Sexpr) -> bool:
 
 def is_port(expr: Sexpr) -> bool:
     "port?"
-    pass
+    from ports import Port
+    return isinstance(expr, Port)
 
 
 def is_string(expr: Sexpr) -> bool:
@@ -60,7 +62,7 @@ def is_string(expr: Sexpr) -> bool:
 
 def is_vector(expr: Sexpr) -> bool:
     "vector?"
-    pass
+    return isinstance(expr, Vector)
 
 
 def is_truthy(expr: Sexpr) -> bool:

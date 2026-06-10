@@ -4,12 +4,21 @@ import sclist as sl
 import scpredicates as sp
 from typing import Callable
 from functools import reduce
+import charlib
+import stringlib
+import vectorlib
+import numberlib
+import bytevectorlib
+import ports
+from continuations import InvokeContinuation
+from values import MultipleValues
+from promise import Promise
 import logging
 logger = logging.getLogger(__name__)
 
 
 def export() -> dict[str, Callable]:
-    return {
+    result = {
         "+": BuiltinFunction(f_plus),
         "-": BuiltinFunction(f_minus),
         "*": BuiltinFunction(f_multi),
@@ -42,17 +51,33 @@ def export() -> dict[str, Callable]:
         "procedure?": BuiltinFunction(f_procedure_p),
         "symbol?": BuiltinFunction(f_symbol_p),
         "bytevector?": BuiltinFunction(f_bytevector_p),
-        "eof-object?": BuiltinFunction(f_eof_object_p),
         "number?": BuiltinFunction(f_number_p),
-        "port?": BuiltinFunction(f_port_p),
         "string?": BuiltinFunction(f_string_p),
         "vector?": BuiltinFunction(f_vector_p),
 
         "apply": BuiltinFunction(f_apply),
+        "map": BuiltinFunction(f_map),
+        "for-each": BuiltinFunction(f_for_each),
+        "force": BuiltinFunction(f_force),
+        "values": BuiltinFunction(f_values),
+        "call-with-values": BuiltinFunction(f_call_with_values),
+        "call-with-current-continuation": BuiltinFunction(f_call_cc),
+        "call/cc": BuiltinFunction(f_call_cc),
+        "dynamic-wind": BuiltinFunction(f_dynamic_wind),
+        "scheme-report-environment": BuiltinFunction(f_scheme_report_environment),
+        "null-environment": BuiltinFunction(f_null_environment),
     }
+    result.update(charlib.export())
+    result.update(stringlib.export())
+    result.update(vectorlib.export())
+    result.update(numberlib.export())
+    result.update(bytevectorlib.export())
+    result.update(ports.export())
+    result["eof-object"] = ports.EOF_OBJECT
+    return result
 
 
-def _to_values(args: Sexpr) -> list[int]:
+def _to_values(args: Sexpr) -> list[int | float]:
     return [x.value for x in sl.to_python_list(args)]
 
 
@@ -185,10 +210,14 @@ def f_equal_p(args: Sexpr, evaluator=None) -> Sexpr:
         match car:
             case String():
                 return sp.is_string(cadr) and car.value == cadr.value
-            case Bytevector():
-                pass
             case Vector():
-                pass
+                return (sp.is_vector(cadr)
+                        and len(car.value) == len(cadr.value)
+                        and all(_equal(a, b)
+                                for a, b in zip(car.value, cadr.value)))
+            case Bytevector():
+                return (sp.is_bytevector(cadr)
+                        and car.value == cadr.value)
             case Cell():
                 return (sp.is_pair(cadr)
                         and _equal(car.car, cadr.car)
@@ -262,16 +291,8 @@ def f_bytevector_p(args: Sexpr, evaluator=None) -> Sexpr:
     return _to_lisp_boolean(sp.is_bytevector(args.car))
 
 
-def f_eof_object_p(args: Sexpr, evaluator=None) -> Sexpr:
-    return _to_lisp_boolean(sp.is_eof_object(args.car))
-
-
 def f_number_p(args: Sexpr, evaluator=None) -> Sexpr:
     return _to_lisp_boolean(sp.is_number(args.car))
-
-
-def f_port_p(args: Sexpr, evaluator=None) -> Sexpr:
-    return _to_lisp_boolean(sp.is_port(args.car))
 
 
 def f_string_p(args: Sexpr, evaluator=None) -> Sexpr:
@@ -282,10 +303,119 @@ def f_vector_p(args: Sexpr, evaluator=None) -> Sexpr:
     return _to_lisp_boolean(sp.is_vector(args.car))
 
 
-def f_apply(args: Sexpr, evaluator=None) -> Sexpr:
-    # this supports (apply fn args) [args is a proper list]
-    # support (apply fn arg1 arg2 ... . argn) [argn are proper list]
+def f_map(args: Sexpr, evaluator=None) -> Sexpr:
+    proc = args.car
+    lists = sl.to_python_list(args.cdr)
+    if not lists:
+        raise Exception("map: at least one list required")
 
+    py_lists: list[list[Sexpr]] = []
+    for lst in lists:
+        if not sp.is_list(lst):
+            raise Exception("map: list required")
+        py_lists.append(sl.to_python_list(lst))
+
+    if not py_lists[0]:
+        return NIL
+
+    length = len(py_lists[0])
+    if any(len(items) != length for items in py_lists):
+        raise Exception("map: lists differ in length")
+
+    results: list[Sexpr] = []
+    for i in range(length):
+        call_args = sl.from_python_list([items[i] for items in py_lists])
+        results.append(evaluator.apply(proc, call_args))
+    return sl.from_python_list(results)
+
+
+def f_for_each(args: Sexpr, evaluator=None) -> Sexpr:
+    proc = args.car
+    lists = sl.to_python_list(args.cdr)
+    if not lists:
+        raise Exception("for-each: at least one list required")
+
+    py_lists: list[list[Sexpr]] = []
+    for lst in lists:
+        if not sp.is_list(lst):
+            raise Exception("for-each: list required")
+        py_lists.append(sl.to_python_list(lst))
+
+    if not py_lists[0]:
+        return NIL
+
+    length = len(py_lists[0])
+    if any(len(items) != length for items in py_lists):
+        raise Exception("for-each: lists differ in length")
+
+    for i in range(length):
+        call_args = sl.from_python_list([items[i] for items in py_lists])
+        evaluator.apply(proc, call_args)
+    return NIL
+
+
+def f_force(args: Sexpr, evaluator=None) -> Sexpr:
+    promise = args.car
+    if not isinstance(promise, Promise):
+        return promise
+    if not promise.evaluated:
+        promise.value = promise.thunk()
+        promise.evaluated = True
+    return promise.value
+
+
+def f_values(args: Sexpr, evaluator=None) -> MultipleValues:
+    return MultipleValues(sl.to_python_list(args))
+
+
+def f_call_with_values(args: Sexpr, evaluator=None) -> Sexpr:
+    producer = args.car
+    consumer = args.cdr.car
+    produced = evaluator.apply_for_values(producer, NIL)
+    if isinstance(produced, MultipleValues):
+        call_args = sl.from_python_list(produced.values)
+    else:
+        call_args = sl.cons(produced, NIL)
+    return evaluator.apply(consumer, call_args)
+
+
+def f_call_cc(args: Sexpr, evaluator=None) -> Sexpr:
+    proc = args.car
+
+    def invoke_k(k_args: Sexpr, evaluator=None) -> Sexpr:
+        raise InvokeContinuation(k_args.car)
+
+    continuation = BuiltinFunction(invoke_k)
+    try:
+        return evaluator.apply(proc, sl.cons(continuation, NIL))
+    except InvokeContinuation as exc:
+        return exc.value
+
+
+def f_dynamic_wind(args: Sexpr, evaluator=None) -> Sexpr:
+    before = args.car
+    thunk = args.cdr.car
+    after = args.cdr.cdr.car
+    evaluator.apply(before, NIL)
+    try:
+        return evaluator.apply(thunk, NIL)
+    finally:
+        evaluator.apply(after, NIL)
+
+
+def f_scheme_report_environment(args: Sexpr, evaluator=None) -> Sexpr:
+    import specialform as sf
+    version = int(args.car.value)
+    return sf.SchemeReportEnvironment(version)
+
+
+def f_null_environment(args: Sexpr, evaluator=None) -> Sexpr:
+    import specialform as sf
+    version = int(args.car.value)
+    return sf.NullEnvironment(version)
+
+
+def f_apply(args: Sexpr, evaluator=None) -> Sexpr:
     def helper(args: Sexpr) -> Sexpr:
         if sp.is_null(args.cdr):
             if sp.is_list(args.car):
@@ -299,7 +429,3 @@ def f_apply(args: Sexpr, evaluator=None) -> Sexpr:
     arg = helper(args.cdr)
     sexp = (sl.cons(proc, arg))
     return evaluator.eval(sexp)
-
-
-# TODO: (include string1, string2, ...)
-# TODO: (include-ci string1, string2, ...)

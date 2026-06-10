@@ -3,6 +3,10 @@ from typing import Callable
 from sexpr import Sexpr, NIL, BuiltinSpecialForm, Lambda, Macro, \
     BOOLEAN_T, BOOLEAN_F, Symbol
 from syntaxobject import resolve_literal_descriptor
+from reader import Reader
+from scanner import Scanner
+from promise import Promise
+from values import MultipleValues
 
 import sclist as sl
 import scpredicates as sp
@@ -26,7 +30,42 @@ def export() -> dict[str, Callable]:
         "or": BuiltinSpecialForm(f_or),
         "begin": BuiltinSpecialForm(f_begin),
         "define-syntax": BuiltinSpecialForm(f_define_syntax),
+        "case": BuiltinSpecialForm(f_case),
+        "do": BuiltinSpecialForm(f_do),
+        "eval": BuiltinSpecialForm(f_eval),
+        "interaction-environment": BuiltinSpecialForm(f_interaction_environment),
+        "include": BuiltinSpecialForm(f_include),
+        "delay": BuiltinSpecialForm(f_delay),
+        "let-syntax": BuiltinSpecialForm(f_let_syntax),
+        "letrec-syntax": BuiltinSpecialForm(f_letrec_syntax),
+        "let-values": BuiltinSpecialForm(f_let_values),
+        "let*-values": BuiltinSpecialForm(f_let_star_values),
+        "letrec-values": BuiltinSpecialForm(f_letrec_values),
     }
+
+
+class InteractionEnvironment(Sexpr):
+    pass
+
+
+class SchemeReportEnvironment(Sexpr):
+    def __init__(self, version: int):
+        self.version = version
+
+
+class NullEnvironment(Sexpr):
+    def __init__(self, version: int):
+        self.version = version
+
+
+INTERACTION_ENVIRONMENT = InteractionEnvironment()
+
+
+def make_null_environment():
+    from evaluator import Env
+    env = Env(None)
+    env.bind_dict(export())
+    return env
 
 
 def f_and(evaluator, args: Sexpr) -> Sexpr:
@@ -270,10 +309,177 @@ def f_cond(evaluator, args: Sexpr) -> Sexpr:
         args = args.cdr
     return NIL
 
-# TODO: (let-values ...)
-# TODO: (let*-values ...)
-# TODO: (letrec-values ...)
-# TODO: (letrec*-values ...)
+def f_interaction_environment(evaluator, args: Sexpr) -> Sexpr:
+    return INTERACTION_ENVIRONMENT
+
+
+def f_include(evaluator, args: Sexpr) -> Sexpr:
+    result = NIL
+    while not sp.is_null(args):
+        path = sl.car(args)
+        if not sp.is_string(path):
+            raise Exception("include: string required")
+        with open(path.value, encoding="utf-8") as stream:
+            reader = Reader(Scanner(stream=stream))
+            while True:
+                sexpr = reader.read()
+                if sexpr is None:
+                    break
+                result = evaluator.eval(sexpr)
+        args = sl.cdr(args)
+    return result
+
+
+def f_eval(evaluator, args: Sexpr) -> Sexpr:
+    expr = evaluator.eval(sl.car(args))
+    env_spec = evaluator.eval(sl.cadr(args))
+    if env_spec is INTERACTION_ENVIRONMENT:
+        return evaluator.eval(expr)
+    if isinstance(env_spec, SchemeReportEnvironment):
+        with evaluator.new_env(evaluator.global_scope):
+            return evaluator.eval(expr)
+    if isinstance(env_spec, NullEnvironment):
+        with evaluator.new_env(evaluator.null_environment):
+            return evaluator.eval(expr)
+    raise Exception("eval: unsupported environment specifier")
+
+
+def f_case(evaluator, args: Sexpr) -> Sexpr:
+    import builtin as blt
+    key = evaluator.eval(sl.car(args))
+    clauses = sl.cdr(args)
+
+    while not sp.is_null(clauses):
+        clause = clauses.car
+        if sp.is_symbol(clause.car) and clause.car.name == "else":
+            body = clause.cdr
+            while not sp.is_null(body):
+                res = evaluator.eval(body.car)
+                body = body.cdr
+            return res
+
+        datums = clause.car
+        body = clause.cdr
+        while not sp.is_null(datums):
+            datum = datums.car
+            eq_args = sl.cons(key, sl.cons(datum, NIL))
+            if sp.is_truthy(blt.f_eqv_p(eq_args)):
+                while not sp.is_null(body):
+                    res = evaluator.eval(body.car)
+                    body = body.cdr
+                return res
+            datums = datums.cdr
+        clauses = clauses.cdr
+    return NIL
+
+
+def f_do(evaluator, args: Sexpr) -> Sexpr:
+    specs = sl.car(args)
+    test_expr = sl.cadr(args)
+    body = sl.cddr(args)
+
+    with evaluator.new_env():
+        steps: list[tuple[Symbol, Sexpr | None]] = []
+        while not sp.is_null(specs):
+            spec = specs.car
+            var = spec.car
+            init = evaluator.eval(sl.cadr(spec))
+            evaluator.bind(var.name, init)
+            step = sl.caddr(spec) if (sp.is_pair(spec.cdr)
+                                      and sp.is_pair(spec.cdr.cdr)) else None
+            steps.append((var, step))
+            specs = specs.cdr
+
+        while True:
+            if sp.is_truthy(evaluator.eval(test_expr.car)):
+                result = NIL
+                rest = test_expr.cdr
+                while not sp.is_null(rest):
+                    result = evaluator.eval(rest.car)
+                    rest = rest.cdr
+                return result
+
+            current_body = body
+            while not sp.is_null(current_body):
+                evaluator.eval(current_body.car)
+                current_body = current_body.cdr
+
+            for var, step in steps:
+                if step is None:
+                    evaluator.assign(var.name, evaluator.find_symbol(var))
+                else:
+                    evaluator.assign(var.name, evaluator.eval(step))
+
+def f_delay(evaluator, args: Sexpr) -> Sexpr:
+    expr = sl.car(args)
+    return Promise(lambda ev=evaluator, form=expr: ev.eval(form))
+
+
+def f_let_syntax(evaluator, args: Sexpr) -> Sexpr:
+    specs = sl.car(args)
+    body = sl.cdr(args)
+    with evaluator.new_env():
+        while not sp.is_null(specs):
+            name = specs.car.car
+            macro = _make_macro(name, sl.cadr(specs.car), evaluator)
+            evaluator.bind(name.name, macro)
+            specs = specs.cdr
+        return _eval_body(evaluator, body)
+
+
+def f_letrec_syntax(evaluator, args: Sexpr) -> Sexpr:
+    specs = sl.car(args)
+    body = sl.cdr(args)
+    pending: list[tuple[Symbol, Sexpr]] = []
+    with evaluator.new_env():
+        while not sp.is_null(specs):
+            name = specs.car.car
+            evaluator.bind(name.name, NIL)
+            pending.append((name, sl.cadr(specs.car)))
+            specs = specs.cdr
+        for name, spec in pending:
+            evaluator.assign(name.name, _make_macro(name, spec, evaluator))
+        return _eval_body(evaluator, body)
+
+
+def f_let_values(evaluator, args: Sexpr) -> Sexpr:
+    specs = sl.car(args)
+    body = sl.cdr(args)
+    with evaluator.new_env():
+        while not sp.is_null(specs):
+            pattern = specs.car.car
+            values = evaluator.eval_values(sl.cadr(specs.car))
+            _bind_values_pattern(evaluator, pattern, values)
+            specs = specs.cdr
+        return _eval_body(evaluator, body)
+
+
+def f_let_star_values(evaluator, args: Sexpr) -> Sexpr:
+    specs = sl.car(args)
+    body = sl.cdr(args)
+    with evaluator.new_env():
+        while not sp.is_null(specs):
+            pattern = specs.car.car
+            values = evaluator.eval_values(sl.cadr(specs.car))
+            _bind_values_pattern(evaluator, pattern, values)
+            specs = specs.cdr
+        return _eval_body(evaluator, body)
+
+
+def f_letrec_values(evaluator, args: Sexpr) -> Sexpr:
+    specs = sl.car(args)
+    body = sl.cdr(args)
+    pending: list[tuple[Sexpr, Sexpr]] = []
+    with evaluator.new_env():
+        while not sp.is_null(specs):
+            pattern = specs.car.car
+            _reserve_values_pattern(evaluator, pattern)
+            pending.append((pattern, sl.cadr(specs.car)))
+            specs = specs.cdr
+        for pattern, init in pending:
+            values = evaluator.eval_values(init)
+            _assign_values_pattern(evaluator, pattern, values)
+        return _eval_body(evaluator, body)
 
 
 def f_begin(evaluator, args: Sexpr) -> Sexpr:
@@ -288,8 +494,12 @@ def f_define_syntax(evaluator, args: Sexpr) -> Sexpr:
     name = sl.car(args)
     if not sp.is_symbol(name):
         raise Exception("define-syntax: name must be a symbol")
+    macro = _make_macro(name, sl.cadr(args), evaluator)
+    evaluator.bind(name.name, macro)
+    return NIL
 
-    spec = sl.cadr(args)
+
+def _make_macro(name: Symbol, spec: Sexpr, evaluator) -> Macro:
     if not sp.is_pair(spec):
         raise Exception("define-syntax: invalid transformer spec")
 
@@ -305,17 +515,66 @@ def f_define_syntax(evaluator, args: Sexpr) -> Sexpr:
             rules.append((sl.car(rule), sl.cadr(rule)))
             rules_expr = rules_expr.cdr
 
-        macro = Macro(name=name.name,
-                      env=evaluator.current_scope,
-                      literals=literals,
-                      rules=rules)
-    else:
-        transformer = evaluator.eval(spec)
-        if not isinstance(transformer, Lambda):
-            raise Exception("define-syntax: transformer must be a procedure")
-        macro = Macro(name=name.name,
-                      env=evaluator.current_scope,
-                      transformer=transformer)
+        return Macro(name=name.name,
+                     env=evaluator.current_scope,
+                     literals=literals,
+                     rules=rules)
 
-    evaluator.bind(name.name, macro)
-    return NIL
+    transformer = evaluator.eval(spec)
+    if not isinstance(transformer, Lambda):
+        raise Exception("define-syntax: transformer must be a procedure")
+    return Macro(name=name.name,
+                 env=evaluator.current_scope,
+                 transformer=transformer)
+
+
+def _eval_body(evaluator, body: Sexpr) -> Sexpr:
+    result = NIL
+    while not sp.is_null(body):
+        result = evaluator.eval(body.car)
+        body = body.cdr
+    return result
+
+
+def _pattern_symbols(pattern: Sexpr) -> list[Symbol]:
+    if sp.is_symbol(pattern):
+        return [pattern]
+    if sp.is_null(pattern):
+        return []
+    if sp.is_pair(pattern):
+        names: list[Symbol] = []
+        current = pattern
+        while sp.is_pair(current):
+            if not sp.is_symbol(current.car):
+                raise Exception("invalid binding pattern")
+            names.append(current.car)
+            current = current.cdr
+        if not sp.is_null(current):
+            if not sp.is_symbol(current):
+                raise Exception("invalid binding pattern")
+            names.append(current)
+        return names
+    raise Exception("invalid binding pattern")
+
+
+def _bind_values_pattern(evaluator, pattern: Sexpr,
+                         values: MultipleValues) -> None:
+    names = _pattern_symbols(pattern)
+    if len(names) != len(values.values):
+        raise Exception("wrong number of values to bind")
+    for name, value in zip(names, values.values):
+        evaluator.bind(name.name, value)
+
+
+def _reserve_values_pattern(evaluator, pattern: Sexpr) -> None:
+    for name in _pattern_symbols(pattern):
+        evaluator.bind(name.name, NIL)
+
+
+def _assign_values_pattern(evaluator, pattern: Sexpr,
+                           values: MultipleValues) -> None:
+    names = _pattern_symbols(pattern)
+    if len(names) != len(values.values):
+        raise Exception("wrong number of values to bind")
+    for name, value in zip(names, values.values):
+        evaluator.assign(name.name, value)

@@ -44,7 +44,7 @@ class Symbol(Atom):
 
 @dataclass(eq=False)
 class Bytevector(Atom):
-    value: bytes
+    value: bytearray
 
 
 @dataclass(eq=False)

@@ -1,12 +1,15 @@
 from contextlib import contextmanager
 from sexpr import Sexpr, Symbol, Cell, Nil, NIL, \
     BuiltinFunction, BuiltinSpecialForm, Lambda, Macro, \
-    Number, Boolean
+    Number, Boolean, String, Char, Vector, Bytevector
 import sclist as sl
 import scpredicates as sp
 import builtin
 import specialform
 import syntaxrules
+import ports
+from promise import Promise
+from values import MultipleValues
 from typing import Self
 
 from logging import getLogger
@@ -38,6 +41,8 @@ class Evaluator:
 
         self.global_scope.bind_dict(builtin.export())
         self.global_scope.bind_dict(specialform.export())
+        ports.init_ports(self)
+        self.null_environment = specialform.make_null_environment()
 
     @contextmanager
     def new_env(self, scope: Env = None):
@@ -57,6 +62,8 @@ class Evaluator:
                 return sexpr
             case Number():
                 return sexpr
+            case String() | Char() | Vector() | Bytevector() | Promise():
+                return sexpr
             case Symbol():
                 return self.find_symbol(sexpr)
             case Lambda():
@@ -68,10 +75,32 @@ class Evaluator:
                     binding = self.lookup_symbol(sexpr.car)
                     if isinstance(binding, Macro):
                         return self.eval(self.expand_macro(binding, sexpr))
-                return self.apply(self.eval(sexpr.car),
-                                  sexpr.cdr)
+                return self._ensure_single_value(
+                    self.apply(self.eval(sexpr.car), sexpr.cdr))
             case _:
                 return sexpr
+
+    def eval_values(self, sexpr: Sexpr) -> MultipleValues:
+        match sexpr:
+            case Cell():
+                if sp.is_symbol(sexpr.car):
+                    binding = self.lookup_symbol(sexpr.car)
+                    if isinstance(binding, Macro):
+                        return self.eval_values(
+                            self.expand_macro(binding, sexpr))
+                result = self.apply(self.eval(sexpr.car), sexpr.cdr)
+                if isinstance(result, MultipleValues):
+                    return result
+                return MultipleValues([result])
+            case _:
+                return MultipleValues([self.eval(sexpr)])
+
+    def _ensure_single_value(self, result: Sexpr | MultipleValues) -> Sexpr:
+        if isinstance(result, MultipleValues):
+            if len(result.values) == 1:
+                return result.values[0]
+            raise Exception("wrong number of values")
+        return result
 
     def eval_list(self, args: Cell | Nil) -> Sexpr:
         if sp.is_null(args):
@@ -79,6 +108,49 @@ class Evaluator:
         else:
             return sl.cons(self.eval(args.car),
                            self.eval_list(args.cdr))
+
+    def apply_for_values(self, func: Sexpr, args: Sexpr) -> MultipleValues:
+        match func:
+            case BuiltinFunction():
+                result = func.fn(self.eval_list(args), evaluator=self)
+                if isinstance(result, MultipleValues):
+                    return result
+                return MultipleValues([result])
+            case Lambda():
+                body = func.body
+                params = func.params
+                fixed_params = []
+                rest_param = None
+
+                if sp.is_symbol(params):
+                    rest_param = params
+                elif sp.is_list(params):
+                    fixed_params = [p for p in sl.to_python_list(params)]
+                elif sp.is_pair(params):
+                    car = params.car
+                    cdr = params.cdr
+                    while sp.is_pair(cdr):
+                        fixed_params.append(car)
+                        car = cdr.car
+                        cdr = cdr.cdr
+                    fixed_params.append(car)
+                    rest_param = cdr
+
+                evaled_args = self.eval_list(args)
+                with self.new_env(func.env):
+                    with self.new_env():
+                        self._bind_arg(fixed_params, rest_param, evaled_args)
+                        while not sp.is_null(body):
+                            if sp.is_null(body.cdr):
+                                return self.eval_values(body.car)
+                            self.eval(body.car)
+                            body = body.cdr
+                        return MultipleValues([NIL])
+            case _:
+                result = self.apply(func, args)
+                if isinstance(result, MultipleValues):
+                    return result
+                return MultipleValues([result])
 
     def apply(self, func: Sexpr, args: Sexpr) -> Sexpr:
 
@@ -117,6 +189,7 @@ class Evaluator:
                 with self.new_env(func.env):
                     with self.new_env():
                         self._bind_arg(fixed_params, rest_param, evaled_args)
+                        res: Sexpr | MultipleValues = NIL
                         while not sp.is_null(body):
                             res = self.eval(body.car)
                             body = body.cdr
