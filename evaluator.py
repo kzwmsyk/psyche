@@ -6,6 +6,7 @@ import sclist as sl
 import scpredicates as sp
 import builtin
 import specialform
+import syntaxrules
 from typing import Self
 
 from logging import getLogger
@@ -60,7 +61,13 @@ class Evaluator:
                 return self.find_symbol(sexpr)
             case Lambda():
                 return sexpr
+            case Macro():
+                return sexpr
             case Cell():
+                if sp.is_symbol(sexpr.car):
+                    binding = self.lookup_symbol(sexpr.car)
+                    if isinstance(binding, Macro):
+                        return self.eval(self.expand_macro(binding, sexpr))
                 return self.apply(self.eval(sexpr.car),
                                   sexpr.cdr)
             case _:
@@ -116,7 +123,7 @@ class Evaluator:
                         return res
             case Macro():
                 raise Exception(
-                    f"Macro application is not supported: {func}")
+                    f"macro {func.name} must be expanded before application")
             case _:
                 raise Exception(f"Unknown function: {func}")
 
@@ -131,6 +138,60 @@ class Evaluator:
 
         if rest_param is not None:
             self.bind(rest_param.name, args)
+
+    def expand_macro(self, macro: Macro, form: Sexpr) -> Sexpr:
+        if macro.transformer is not None:
+            return self._invoke_macro_transformer(macro.transformer,
+                                                  macro.env,
+                                                  form)
+        literals = [macro.name, *macro.literals]
+        return syntaxrules.expand_syntax_rules(literals,
+                                               macro.rules,
+                                               form)
+
+    def _invoke_macro_transformer(self,
+                                  transformer: Lambda,
+                                  env: Env,
+                                  form: Sexpr) -> Sexpr:
+        with self.new_env(env):
+            with self.new_env():
+                self._bind_macro_form(transformer.params, form)
+                body = transformer.body
+                while not sp.is_null(body):
+                    res = self.eval(body.car)
+                    body = body.cdr
+                return res
+
+    def _bind_macro_form(self, params: Sexpr, form: Sexpr):
+        if sp.is_symbol(params):
+            self.bind(params.name, form)
+            return
+
+        if sp.is_list(params):
+            param_list = sl.to_python_list(params)
+        elif sp.is_pair(params):
+            param_list = []
+            car = params.car
+            cdr = params.cdr
+            while sp.is_pair(cdr):
+                param_list.append(car)
+                car = cdr.car
+                cdr = cdr.cdr
+            param_list.append(car)
+        else:
+            raise Exception("define-syntax: invalid transformer parameters")
+
+        if len(param_list) != 1:
+            raise Exception("define-syntax: transformer must take one argument")
+        self.bind(param_list[0].name, form)
+
+    def lookup_symbol(self, symbol: Symbol) -> Sexpr | None:
+        scope = self.current_scope
+        while scope is not None:
+            if symbol.name in scope.env:
+                return scope.env[symbol.name]
+            scope = scope.parent
+        return None
 
     def find_symbol(self, symbol: Symbol) -> Sexpr:
         scope = self.current_scope

@@ -129,7 +129,9 @@ def f_equal_p(args: Sexpr, evaluator=None) -> Sexpr:
                 return (sp.is_pair(cadr)
                         and _equal(car.car, cadr.car)
                         and _equal(car.cdr, cadr.cdr))
-    return _to_lisp_boolean(car == cadr)
+            case _:
+                return False
+    return _to_lisp_boolean(_equal(car, cadr))
 
 
 def f_car(args: Sexpr, evaluator=None) -> Sexpr:

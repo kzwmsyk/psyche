@@ -3,11 +3,24 @@ from sexpr import Sexpr, Cell, NIL
 import scpredicates as sp
 
 
-def to_python_list(args: Sexpr) -> list[int]:
+def to_python_list(args: Sexpr) -> list[Sexpr]:
     if sp.is_null(args):
         return []
     else:
         return [args.car] + to_python_list(args.cdr)
+
+
+def from_python_list(items: list[Sexpr]) -> Sexpr:
+    result = NIL
+    for item in reversed(items):
+        result = cons(item, result)
+    return result
+
+
+def append_list(head: Sexpr, tail: Sexpr) -> Sexpr:
+    if sp.is_null(head):
+        return tail
+    return cons(head.car, append_list(head.cdr, tail))
 
 
 def cons(car: Sexpr, cdr: Sexpr) -> Sexpr:

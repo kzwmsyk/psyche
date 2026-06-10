@@ -78,12 +78,19 @@ class Lambda(Sexpr):
         self.env = env
 
 
-@dataclass
 class Macro(Sexpr):
-    name: str
-    params: Sexpr
-    body: Sexpr
-    env = None
+    def __init__(self,
+                 name: str,
+                 env,
+                 *,
+                 transformer: "Lambda | None" = None,
+                 literals: list[str] | None = None,
+                 rules: list[tuple[Sexpr, Sexpr]] | None = None):
+        self.name = name
+        self.env = env
+        self.transformer = transformer
+        self.literals = literals or []
+        self.rules = rules or []
 
 
 @dataclass

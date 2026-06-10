@@ -1,6 +1,6 @@
 import logging
 from typing import Callable
-from sexpr import Sexpr, NIL, BuiltinSpecialForm, Lambda, \
+from sexpr import Sexpr, NIL, BuiltinSpecialForm, Lambda, Macro, \
     BOOLEAN_T, BOOLEAN_F, Symbol
 
 import sclist as sl
@@ -21,6 +21,7 @@ def export() -> dict[str, Callable]:
         "and": BuiltinSpecialForm(f_and),
         "or": BuiltinSpecialForm(f_or),
         "begin": BuiltinSpecialForm(f_begin),
+        "define-syntax": BuiltinSpecialForm(f_define_syntax),
     }
 
 
@@ -178,5 +179,34 @@ def f_begin(evaluator, args: Sexpr) -> Sexpr:
 
 
 def f_define_syntax(evaluator, args: Sexpr) -> Sexpr:
+    name = sl.car(args)
+    if not sp.is_symbol(name):
+        raise Exception("define-syntax: name must be a symbol")
 
-    pass
+    spec = sl.cadr(args)
+    if not sp.is_pair(spec):
+        raise Exception("define-syntax: invalid transformer spec")
+
+    if sl.car(spec) == Symbol("syntax-rules"):
+        literals = [lit.name for lit in sl.to_python_list(sl.cadr(spec))]
+        rules_expr = sl.cddr(spec)
+        rules = []
+        while not sp.is_null(rules_expr):
+            rule = rules_expr.car
+            rules.append((sl.car(rule), sl.cadr(rule)))
+            rules_expr = rules_expr.cdr
+
+        macro = Macro(name=name.name,
+                      env=evaluator.current_scope,
+                      literals=literals,
+                      rules=rules)
+    else:
+        transformer = evaluator.eval(spec)
+        if not isinstance(transformer, Lambda):
+            raise Exception("define-syntax: transformer must be a procedure")
+        macro = Macro(name=name.name,
+                      env=evaluator.current_scope,
+                      transformer=transformer)
+
+    evaluator.bind(name.name, macro)
+    return NIL

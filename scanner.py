@@ -82,6 +82,13 @@ class Scanner:
                     self._pushback_char(c)
                     return self._create_token(TokenType.UNQUOTE)
             case '.':
+                c = self._get_char()
+                if c == '.':
+                    c2 = self._get_char()
+                    if c2 == '.':
+                        return self._create_token(TokenType.SYMBOL, '...')
+                    self._pushback_char(c2)
+                self._pushback_char(c)
                 return self._create_token(TokenType.DOT)
             case '"':
                 buf = ""

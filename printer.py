@@ -31,7 +31,7 @@ class Printer:
             case BuiltinSpecialForm():
                 return f"#<builtin ({sexpr.fn})>"
             case Macro():
-                return f"#<macro ({sexpr.params})>"
+                return f"#<macro {sexpr.name}>"
             case Cell():
                 return "(" + self.to_string_list(sexpr)
 
