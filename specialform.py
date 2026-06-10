@@ -18,6 +18,9 @@ def export() -> dict[str, Callable]:
         "lambda": BuiltinSpecialForm(f_lambda),
         "define": BuiltinSpecialForm(f_define),
         "let": BuiltinSpecialForm(f_let),
+        "let*": BuiltinSpecialForm(f_let_star),
+        "letrec": BuiltinSpecialForm(f_letrec),
+        "cond": BuiltinSpecialForm(f_cond),
         "and": BuiltinSpecialForm(f_and),
         "or": BuiltinSpecialForm(f_or),
         "begin": BuiltinSpecialForm(f_begin),
@@ -48,12 +51,16 @@ def f_if(evaluator, args: Sexpr) -> Sexpr:
         then_sexpr = sl.cadr(args)
         return evaluator.eval(then_sexpr)
     else:
+        if sp.is_null(sl.cddr(args)):
+            return NIL
         else_sexpr = sl.caddr(args)
         return evaluator.eval(else_sexpr)
 
 
 def f_set_bang(evaluator, args: Sexpr) -> Sexpr:
-    evaluator.bind(sl.car(args).name, evaluator.eval(sl.cadr(args)))
+    name = sl.car(args).name
+    value = evaluator.eval(sl.cadr(args))
+    evaluator.assign(name, value)
     return NIL
 
 
@@ -162,8 +169,75 @@ def f_let(evaluator, args: Sexpr) -> Sexpr:
             body = body.cdr
         return res
 
-# TODO: (let* ...)
-# TODO: (letrec ...)
+
+def f_let_star(evaluator, args: Sexpr) -> Sexpr:
+    vars = sl.car(args)
+    body = sl.cdr(args)
+    with evaluator.new_env():
+        while not sp.is_null(vars):
+            pair = vars.car
+            symbol = pair.car
+            value = evaluator.eval(sl.cadr(pair))
+            evaluator.bind(symbol.name, value)
+            vars = vars.cdr
+
+        while not sp.is_null(body):
+            res = evaluator.eval(body.car)
+            body = body.cdr
+        return res
+
+
+def f_letrec(evaluator, args: Sexpr) -> Sexpr:
+    vars = sl.car(args)
+    body = sl.cdr(args)
+    inits: list[tuple[Symbol, Sexpr]] = []
+
+    with evaluator.new_env():
+        while not sp.is_null(vars):
+            pair = vars.car
+            symbol = pair.car
+            evaluator.bind(symbol.name, NIL)
+            inits.append((symbol, sl.cadr(pair)))
+            vars = vars.cdr
+
+        for symbol, init in inits:
+            evaluator.assign(symbol.name, evaluator.eval(init))
+
+        while not sp.is_null(body):
+            res = evaluator.eval(body.car)
+            body = body.cdr
+        return res
+
+
+def f_cond(evaluator, args: Sexpr) -> Sexpr:
+    while not sp.is_null(args):
+        clause = args.car
+        if not sp.is_pair(clause):
+            raise Exception("cond: invalid clause")
+
+        if sp.is_symbol(clause.car) and clause.car.name == "else":
+            body = clause.cdr
+            while not sp.is_null(body):
+                res = evaluator.eval(body.car)
+                body = body.cdr
+            return res
+
+        test_result = evaluator.eval(clause.car)
+        if sp.is_truthy(test_result):
+            rest = clause.cdr
+            if sp.is_null(rest):
+                return test_result
+            if sp.is_symbol(rest.car) and rest.car.name == "=>":
+                proc = evaluator.eval(sl.cadr(rest))
+                return evaluator.apply(proc, sl.cons(test_result, NIL))
+            while not sp.is_null(rest):
+                res = evaluator.eval(rest.car)
+                rest = rest.cdr
+            return res
+
+        args = args.cdr
+    return NIL
+
 # TODO: (let-values ...)
 # TODO: (let*-values ...)
 # TODO: (letrec-values ...)

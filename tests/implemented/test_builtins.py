@@ -49,3 +49,30 @@ def test_eqv(eval_str):
 def test_apply(eval_str):
     assert eval_str("(apply + (list 1 2 3))") == "6"
     assert eval_str("(apply + 1 2 (list 3 4))") == "10"
+
+
+def test_numeric_comparison(eval_str):
+    assert eval_str("(= 1 1)") == "#t"
+    assert eval_str("(< 1 2)") == "#t"
+    assert eval_str("(> 5 3)") == "#t"
+    assert eval_str("(<= 2 2)") == "#t"
+    assert eval_str("(>= 3 2)") == "#t"
+
+
+def test_procedure_p(eval_str):
+    assert eval_str("(procedure? (lambda (x) x))") == "#t"
+    assert eval_str("(procedure? +)") == "#t"
+    assert eval_str("(procedure? 1)") == "#f"
+
+
+def test_eq_and_eqv(eval_str):
+    assert eval_str("(eqv? 2 2)") == "#t"
+    assert eval_str("(eq? 2 2)") == "#f"
+    assert eval_str("(eq? 'a 'a)") == "#t"
+    code = """
+    (begin
+      (define p (cons 1 2))
+      (eq? p p))
+    """
+    assert eval_str(code) == "#t"
+    assert eval_str("(eq? (cons 1 2) (cons 1 2))") == "#f"

@@ -15,6 +15,12 @@ def export() -> dict[str, Callable]:
         "*": BuiltinFunction(f_multi),
         "/": BuiltinFunction(f_div),
 
+        "=": BuiltinFunction(f_num_eq),
+        "<": BuiltinFunction(f_lt),
+        ">": BuiltinFunction(f_gt),
+        "<=": BuiltinFunction(f_le),
+        ">=": BuiltinFunction(f_ge),
+
         "eq?": BuiltinFunction(f_eq_p),
         "eqv?": BuiltinFunction(f_eqv_p),
         "equal?": BuiltinFunction(f_equal_p),
@@ -79,29 +85,87 @@ def f_div(args: Sexpr, evaluator=None) -> Sexpr:
     return Number(reduce(lambda x, y: x / y, lst))
 
 
+def _compare_args(args: Sexpr) -> tuple[Sexpr, Sexpr]:
+    return args.car, args.cdr.car
+
+
+def _as_numbers(car: Sexpr, cadr: Sexpr) -> tuple[int | float, int | float]:
+    if not sp.is_number(car) or not sp.is_number(cadr):
+        raise Exception("number required")
+    return car.value, cadr.value
+
+
+def f_num_eq(args: Sexpr, evaluator=None) -> Sexpr:
+    car, cadr = _compare_args(args)
+    left, right = _as_numbers(car, cadr)
+    return _to_lisp_boolean(left == right)
+
+
+def f_lt(args: Sexpr, evaluator=None) -> Sexpr:
+    car, cadr = _compare_args(args)
+    left, right = _as_numbers(car, cadr)
+    return _to_lisp_boolean(left < right)
+
+
+def f_gt(args: Sexpr, evaluator=None) -> Sexpr:
+    car, cadr = _compare_args(args)
+    left, right = _as_numbers(car, cadr)
+    return _to_lisp_boolean(left > right)
+
+
+def f_le(args: Sexpr, evaluator=None) -> Sexpr:
+    car, cadr = _compare_args(args)
+    left, right = _as_numbers(car, cadr)
+    return _to_lisp_boolean(left <= right)
+
+
+def f_ge(args: Sexpr, evaluator=None) -> Sexpr:
+    car, cadr = _compare_args(args)
+    left, right = _as_numbers(car, cadr)
+    return _to_lisp_boolean(left >= right)
+
+
 def f_eq_p(args: Sexpr, evaluator=None) -> Sexpr:
-    (car, cadr) = args.car, args.cdr.car
-    # TODO: eqv?との違いをきちんと実装する
-    return _to_lisp_boolean(_eqv(car, cadr))
+    car, cadr = _compare_args(args)
+    return _to_lisp_boolean(_eq(car, cadr))
+
+
+def _eq(car: Sexpr, cadr: Sexpr) -> bool:
+    if car is cadr:
+        return True
+
+    match car:
+        case Boolean():
+            return sp.is_boolean(cadr) and car.value == cadr.value
+        case Symbol():
+            return sp.is_symbol(cadr) and car.name == cadr.name
+        case Nil():
+            return sp.is_null(cadr)
+        case Cell() | String() | Vector() | Bytevector():
+            return False
+        case Number() | Char():
+            return False
+        case _:
+            return False
 
 
 def _eqv(car: Sexpr, cadr: Sexpr) -> bool:
+    if car is cadr:
+        return True
+
     match car:
         case Boolean():
             return sp.is_boolean(cadr) and car.value == cadr.value
         case Symbol():
             return sp.is_symbol(cadr) and car.name == cadr.name
         case Number():
-            # TODO: 不正確な数値の場合を考慮しないといけない
             return sp.is_number(cadr) and car.value == cadr.value
-        case Bytevector():
-            pass
         case Char():
-            pass
+            return sp.is_char(cadr) and car.value == cadr.value
         case Nil():
             return sp.is_null(cadr)
         case _:
-            return car is cadr
+            return False
 
 
 def f_eqv_p(args: Sexpr, evaluator=None) -> Sexpr:

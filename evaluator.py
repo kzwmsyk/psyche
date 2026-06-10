@@ -213,3 +213,12 @@ class Evaluator:
 
     def bind(self, name: str, sexpr: Sexpr):
         self.current_scope.bind(name, sexpr)
+
+    def assign(self, name: str, sexpr: Sexpr):
+        scope = self.current_scope
+        while scope is not None:
+            if name in scope.env:
+                scope.env[name] = sexpr
+                return
+            scope = scope.parent
+        raise Exception(f"Unbound variable: {name}")

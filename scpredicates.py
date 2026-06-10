@@ -1,6 +1,6 @@
 
 from sexpr import Sexpr, Cell, Nil, Symbol, Number, String, \
-    BOOLEAN_T, BOOLEAN_F
+    BOOLEAN_T, BOOLEAN_F, Lambda, BuiltinFunction
 
 
 def is_boolean(expr: Sexpr) -> bool:
@@ -25,7 +25,7 @@ def is_pair(expr: Sexpr) -> bool:
 
 def is_procedure(expr: Sexpr) -> bool:
     "procedure?"
-    pass
+    return isinstance(expr, (Lambda, BuiltinFunction))
 
 
 def is_symbol(expr: Sexpr) -> bool:

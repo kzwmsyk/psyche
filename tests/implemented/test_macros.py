@@ -50,4 +50,4 @@ def test_syntax_rules_swap(eval_str):
       (swap! a b)
       (list a b))
     """
-    assert eval_str(code) == "(1 2)"
+    assert eval_str(code) == "(2 1)"
