@@ -1,0 +1,6 @@
+(test-eq 3 (length (list 1 2 3)))
+(test-eq (list 1 2 3) (append (list 1 2) (list 3)))
+(test-eq (list 3 2 1) (reverse (list 1 2 3)))
+(test-eq 2 (cadr (list 1 2 3)))
+(test-assert (list? (list 1 2)))
+(test-assert (pair? (cons 1 2)))

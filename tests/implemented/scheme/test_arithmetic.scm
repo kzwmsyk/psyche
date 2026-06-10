@@ -1,0 +1,5 @@
+(test-eq 6 (+ 1 2 3))
+(test-eq 7 (- 10 3))
+(test-eq -5 (- 5))
+(test-eq 24 (* 2 3 4))
+(test-assert (boolean? (not #f)))

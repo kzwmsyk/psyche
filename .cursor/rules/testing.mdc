@@ -1,0 +1,31 @@
+---
+description: psyche のテスト配置ルール
+alwaysApply: true
+---
+
+# テスト
+
+## ディレクトリ構成
+
+| 状態 | 置き場所 |
+|---|---|
+| 実装済み機能 | `tests/implemented/` |
+| 未実装機能 | `tests/unimplemented/` |
+
+- Python テスト: `test_*.py`
+- Scheme テスト: `tests/*/scheme/test_*.scm`（`test-lib.scm` の `test-eq` / `test-assert` を使用）
+
+## 新機能を追加するとき
+
+- 実装と同時に `tests/implemented/` へテストを追加する
+
+## 未実装機能を実装したとき
+
+1. `tests/unimplemented/` にある該当テストを `tests/implemented/` へ移す
+2. `unimplemented` 用の `xfail` マーカーが付いていれば外す
+3. 移したテストがパスすることを確認する
+
+## 未実装機能のテストを書くとき
+
+- まだ実装していない仕様のテストは `tests/unimplemented/` に置く
+- この配下のテストは `xfail` 扱い（実装完了後に `implemented` へ移動する前提）
