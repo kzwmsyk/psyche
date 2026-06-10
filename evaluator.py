@@ -144,10 +144,11 @@ class Evaluator:
             return self._invoke_macro_transformer(macro.transformer,
                                                   macro.env,
                                                   form)
-        literals = [macro.name, *macro.literals]
-        return syntaxrules.expand_syntax_rules(literals,
+        return syntaxrules.expand_syntax_rules(macro.name,
+                                               macro.literals,
                                                macro.rules,
-                                               form)
+                                               form,
+                                               self)
 
     def _invoke_macro_transformer(self,
                                   transformer: Lambda,

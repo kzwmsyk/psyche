@@ -84,7 +84,7 @@ class Macro(Sexpr):
                  env,
                  *,
                  transformer: "Lambda | None" = None,
-                 literals: list[str] | None = None,
+                 literals: "list | None" = None,
                  rules: list[tuple[Sexpr, Sexpr]] | None = None):
         self.name = name
         self.env = env

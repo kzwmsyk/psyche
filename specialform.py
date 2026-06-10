@@ -2,6 +2,7 @@ import logging
 from typing import Callable
 from sexpr import Sexpr, NIL, BuiltinSpecialForm, Lambda, Macro, \
     BOOLEAN_T, BOOLEAN_F, Symbol
+from syntaxobject import resolve_literal_descriptor
 
 import sclist as sl
 import scpredicates as sp
@@ -153,6 +154,9 @@ def _append(ls: Sexpr, elem: Sexpr) -> Sexpr:
 
 
 def f_let(evaluator, args: Sexpr) -> Sexpr:
+    if sp.is_symbol(sl.car(args)):
+        return _named_let(evaluator, args)
+
     vars = sl.car(args)
     body = sl.cdr(args)
     with evaluator.new_env():
@@ -168,6 +172,34 @@ def f_let(evaluator, args: Sexpr) -> Sexpr:
             res = evaluator.eval(body.car)
             body = body.cdr
         return res
+
+
+def _named_let(evaluator, args: Sexpr) -> Sexpr:
+    name = sl.car(args)
+    vars = sl.cadr(args)
+    body = sl.cddr(args)
+
+    param_list: list[Symbol] = []
+    init_exprs: list[Sexpr] = []
+    while not sp.is_null(vars):
+        pair = vars.car
+        param_list.append(pair.car)
+        init_exprs.append(sl.cadr(pair))
+        vars = vars.cdr
+
+    params = sl.from_python_list(param_list)
+    lambda_ = Lambda(params=params, body=body, env=evaluator.current_scope)
+    evaled_inits = [evaluator.eval(init) for init in init_exprs]
+
+    with evaluator.new_env():
+        evaluator.bind(name.name, lambda_)
+        with evaluator.new_env():
+            for param, value in zip(param_list, evaled_inits):
+                evaluator.bind(param.name, value)
+            while not sp.is_null(body):
+                res = evaluator.eval(body.car)
+                body = body.cdr
+            return res
 
 
 def f_let_star(evaluator, args: Sexpr) -> Sexpr:
@@ -262,7 +294,10 @@ def f_define_syntax(evaluator, args: Sexpr) -> Sexpr:
         raise Exception("define-syntax: invalid transformer spec")
 
     if sl.car(spec) == Symbol("syntax-rules"):
-        literals = [lit.name for lit in sl.to_python_list(sl.cadr(spec))]
+        literals = [
+            resolve_literal_descriptor(evaluator, lit)
+            for lit in sl.to_python_list(sl.cadr(spec))
+        ]
         rules_expr = sl.cddr(spec)
         rules = []
         while not sp.is_null(rules_expr):
